@@ -17,18 +17,40 @@ A clean, modular command-line interface for the Hack The Box Labs API.
 pipx install htb-terminal
 ```
 
+To enable OS keyring storage:
+
+```bash
+pipx install "htb-terminal[auth]"
+```
+
+If a keyring backend isn’t available on your system, the CLI automatically falls back to the
+config file token at `~/.config/htb-cli/token`.
+
+Check if keyring is installed:
+
+```bash
+python -c "import keyring; print(keyring.__version__)"
+```
+
+If you already installed `htb-terminal` without extras:
+
+```bash
+pipx inject htb-terminal keyring
+```
+
 ## Setup
 
 Get your API token from [HTB App Token Settings](https://app.hackthebox.com/account-settings).
 
 ```bash
-# Option 1: Environment variable
-export HTB_TOKEN='your-token-here'  # add to ~/.bashrc to persist
+# Recommended: store token securely (keyring if available)
+htb auth set
 
-# Option 2: Token file
-echo 'your-token-here' > ~/.htb-token
-chmod 600 ~/.htb-token
+# Option 2: Environment variable (overrides stored token)
+export HTB_TOKEN='your-token-here'  # add to ~/.bashrc to persist
 ```
+
+If keyring is unavailable, the token is stored in `~/.config/htb-cli/token` with mode `0600`.
 
 ## Usage
 
@@ -37,6 +59,12 @@ chmod 600 ~/.htb-token
 htb status
 htb whoami
 htb search "linux"
+
+# Auth
+htb auth set
+htb auth show
+htb auth status
+htb auth unset
 
 # Machines (supports name or ID!)
 htb machine list
@@ -69,6 +97,7 @@ htb challenge active                 # Show running docker instance
 htb challenge start "Reminiscent"
 htb challenge stop "Reminiscent"
 htb challenge download "Reminiscent"
+htb challenge download "Reminiscent" -o ./downloads/
 htb challenge own 'HTB{flag}' --challenge "Reminiscent"
 
 # Sherlocks
@@ -76,6 +105,7 @@ htb sherlock list
 htb sherlock info "Meerkat"
 htb sherlock tasks "Meerkat"         # List questions
 htb sherlock download "Meerkat"
+htb sherlock download "Meerkat" -o ./downloads/
 htb sherlock own "Meerkat" "answer" --task 1
 
 # VPN
@@ -89,6 +119,7 @@ htb vpn servers --product starting_point
 htb vpn switch 123
 htb vpn download 123                 # TCP by default
 htb vpn download 123 --udp           # UDP variant
+htb vpn download 123 -o ./downloads/
 
 # Seasons/Arena
 htb season list

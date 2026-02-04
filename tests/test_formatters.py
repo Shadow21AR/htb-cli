@@ -28,3 +28,21 @@ def test_create_table():
     assert table is not None
     # Table should have 3 columns
     assert len(table.columns) == 3
+
+
+def test_resolve_output_path(tmp_path):
+    """Test output path resolution for files and directories."""
+    from htb.files import resolve_output_path
+
+    filename = "example.txt"
+
+    # None -> filename in cwd (relative)
+    path = resolve_output_path(None, filename)
+    assert path.name == filename
+
+    # Directory path -> filename inside directory
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    path = resolve_output_path(out_dir, filename)
+    assert path.parent == out_dir
+    assert path.name == filename

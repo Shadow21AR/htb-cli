@@ -16,6 +16,7 @@ from typing import Optional
 import typer
 
 from ..client import HTBError, api_download_bytes, api_get, api_post
+from ..files import resolve_output_path
 from ..formatters import (
     console,
     print_error,
@@ -140,17 +141,17 @@ def download(
         sherlock_id = _resolve_sherlock_id(name)
         content = api_download_bytes(f"/sherlocks/{sherlock_id}/download_link")
 
-        # Get sherlock name for filename if not specified
-        if output is None:
-            try:
-                info_data = api_get(f"/sherlocks/{sherlock_id}")
-                sherlock_name = info_data.get("data", {}).get("name", f"sherlock_{sherlock_id}")
-            except Exception:
-                sherlock_name = f"sherlock_{sherlock_id}"
-            output = Path(f"{sherlock_name}.zip")
+        # Get sherlock name for filename
+        try:
+            info_data = api_get(f"/sherlocks/{sherlock_id}")
+            sherlock_name = info_data.get("data", {}).get("name", f"sherlock_{sherlock_id}")
+        except Exception:
+            sherlock_name = f"sherlock_{sherlock_id}"
 
-        output.write_bytes(content)
-        print_success(f"Downloaded to: {output}")
+        filename = f"{sherlock_name}.zip"
+        path = resolve_output_path(output, filename)
+        path.write_bytes(content)
+        print_success(f"Downloaded to: {path}")
 
     except HTBError as e:
         print_error(e.message)

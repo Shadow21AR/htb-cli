@@ -11,6 +11,7 @@ from typing import Any
 
 from rich import box
 from rich.console import Console
+from rich.markup import escape as rich_escape
 from rich.panel import Panel
 from rich.table import Table
 
@@ -20,10 +21,11 @@ console = Console()
 def sanitize_text(value: Any) -> str:
     """Strip non-printable and control characters from a value, keeping normal text."""
     s = html.unescape(html.unescape(str(value)))
-    return "".join(
+    cleaned = "".join(
         ch for ch in s
         if ch == "\n" or (not unicodedata.category(ch).startswith("C"))
     )
+    return rich_escape(cleaned)
 
 
 def print_json(data: Any) -> None:

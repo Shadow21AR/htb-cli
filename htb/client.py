@@ -4,6 +4,7 @@ HTTP client for HTB API.
 Handles authentication, error handling, retries, and response parsing.
 """
 
+import atexit
 import time
 from typing import Any
 
@@ -44,12 +45,15 @@ class HTBClient:
             data = {"raw": response.text}
 
         if response.status_code >= 400:
-            message = (
-                data.get("message")
-                or data.get("error")
-                or data.get("msg")
-                or f"HTTP {response.status_code}"
-            )
+            if response.status_code in (401, 403):
+                message = "Authentication failed. Run `htb auth set` or set HTB_TOKEN."
+            else:
+                message = (
+                    data.get("message")
+                    or data.get("error")
+                    or data.get("msg")
+                    or f"HTTP {response.status_code}"
+                )
             raise HTBError(message, response.status_code, data)
 
         return data
@@ -134,7 +138,11 @@ def get_client() -> HTBClient:
     """Get or create the global client."""
     global _client
     if _client is None:
-        _client = HTBClient()
+        try:
+            _client = HTBClient()
+            atexit.register(_client.close)
+        except FileNotFoundError as e:
+            raise HTBError(str(e)) from e
     return _client
 
 

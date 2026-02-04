@@ -17,6 +17,7 @@ from typing import Optional
 import typer
 
 from ..client import HTBError, api_download_bytes, api_get, api_post
+from ..files import resolve_output_path
 from ..formatters import (
     console,
     print_challenge,
@@ -240,16 +241,16 @@ def download(
         content = api_download_bytes(f"/challenge/download/{challenge_id}")
 
         # Get challenge name for filename if not specified
-        if output is None:
-            try:
-                info_data = api_get(f"/challenge/info/{challenge_id}")
-                challenge_name = info_data.get("challenge", {}).get("name", f"challenge_{challenge_id}")
-            except Exception:
-                challenge_name = f"challenge_{challenge_id}"
-            output = Path(f"{challenge_name}.zip")
+        try:
+            info_data = api_get(f"/challenge/info/{challenge_id}")
+            challenge_name = info_data.get("challenge", {}).get("name", f"challenge_{challenge_id}")
+        except Exception:
+            challenge_name = f"challenge_{challenge_id}"
 
-        output.write_bytes(content)
-        print_success(f"Downloaded to: {output}")
+        filename = f"{challenge_name}.zip"
+        path = resolve_output_path(output, filename)
+        path.write_bytes(content)
+        print_success(f"Downloaded to: {path}")
 
     except HTBError as e:
         print_error(e.message)

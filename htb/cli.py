@@ -31,7 +31,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import challenges, machines, season, sherlocks, vpn
+from .commands import auth, challenges, machines, season, sherlocks, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 
 console = Console()
@@ -49,6 +49,7 @@ app.add_typer(machines.app, name="machine")
 app.add_typer(season.app, name="season")
 app.add_typer(challenges.app, name="challenge")
 app.add_typer(sherlocks.app, name="sherlock")
+app.add_typer(auth.app, name="auth")
 
 
 @app.command("status")

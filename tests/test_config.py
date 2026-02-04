@@ -34,3 +34,45 @@ def test_config_url_building():
 
     # Version override
     assert config.url("/v5/machine/own") == "https://labs.hackthebox.com/api/v5/machine/own"
+
+
+def test_config_from_file(tmp_path, monkeypatch):
+    """Test loading token from config file when env/keyring are absent."""
+    from htb import config as cfg
+
+    # Force no env token and no keyring
+    monkeypatch.delenv("HTB_TOKEN", raising=False)
+    monkeypatch.setattr(cfg, "keyring", None)
+
+    # Redirect config dir to tmp
+    monkeypatch.setattr(cfg, "user_config_dir", lambda *args, **kwargs: str(tmp_path))
+
+    token_path = cfg.get_token_file_path()
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    token_path.write_text("file-token\n")
+
+    token = cfg.load_token()
+    assert token == "file-token"
+
+
+def test_missing_token_raises_htb_error(monkeypatch):
+    """Ensure missing token raises HTBError (not FileNotFoundError)."""
+    from htb import client as htb_client
+    from htb.config import get_token_file_path
+
+    # Force no env token and no keyring
+    monkeypatch.delenv("HTB_TOKEN", raising=False)
+    monkeypatch.setattr("htb.config.keyring", None)
+
+    # Ensure no token file
+    token_path = get_token_file_path()
+    if token_path.exists():
+        token_path.unlink()
+
+    htb_client._client = None
+
+    try:
+        htb_client.get_client()
+        assert False, "Expected HTBError"
+    except htb_client.HTBError as e:
+        assert "No HTB token found" in str(e)

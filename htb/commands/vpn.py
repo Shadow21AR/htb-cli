@@ -16,6 +16,7 @@ from typing import Optional
 import typer
 
 from ..client import HTBError, api_download, api_get, api_post
+from ..files import resolve_output_path
 from ..formatters import (
     console,
     print_connection_status,
@@ -176,13 +177,12 @@ def download(
         content = api_download(path)
 
         # Generate filename if not specified
-        if output is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            protocol = "udp" if udp else "tcp"
-            output = Path(f"htb-{server_id}-{protocol}-{timestamp}.ovpn")
-
-        output.write_text(content)
-        print_success(f"VPN config saved to: {output}")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        protocol = "udp" if udp else "tcp"
+        filename = f"htb-{server_id}-{protocol}-{timestamp}.ovpn"
+        path = resolve_output_path(output, filename)
+        path.write_text(content)
+        print_success(f"VPN config saved to: {path}")
 
     except HTBError as e:
         print_error(e.message)

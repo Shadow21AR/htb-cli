@@ -3,13 +3,24 @@ Configuration management for HTB CLI.
 
 Supports multiple token sources:
 1. HTB_TOKEN environment variable
-2. ~/.htb-token file (plain text, first line)
+2. OS keyring (optional)
+3. XDG config file (plain text, first line)
 """
 
 import os
+from os import chmod
 from dataclasses import dataclass
 from pathlib import Path
 
+from platformdirs import user_config_dir
+
+try:
+    import keyring
+except Exception:  # pragma: no cover - optional dependency
+    keyring = None
+
+KEYRING_SERVICE = "htb-cli"
+KEYRING_USER = "token"
 
 @dataclass
 class Config:
@@ -36,25 +47,93 @@ class Config:
 
 def load_token() -> str:
     """Load token from environment or file."""
+    token, _ = resolve_token()
+    return token
+
+
+def resolve_token() -> tuple[str, str]:
+    """Resolve token and return (token, source)."""
     # 1. Check environment variable first
     token = os.environ.get("HTB_TOKEN")
     if token:
-        return token.strip()
+        return token.strip(), "env"
 
-    # 2. Check token file
-    token_path = Path.home() / ".htb-token"
+    # 2. Check keyring
+    if keyring is not None:
+        try:
+            token = keyring.get_password(KEYRING_SERVICE, KEYRING_USER)
+            if token:
+                return token.strip(), "keyring"
+        except Exception:
+            pass
+
+    # 3. Check token file
+    token_path = get_token_file_path()
     if token_path.exists():
-        token = token_path.read_text().strip().split('\n')[0]
+        token = token_path.read_text().strip().split("\n")[0]
         if token:
-            return token
+            return token, "file"
 
     raise FileNotFoundError(
         "No HTB token found.\n"
-        "Set HTB_TOKEN environment variable or create ~/.htb-token file:\n"
-        "  export HTB_TOKEN='your-token'\n"
-        "  # or\n"
-        "  echo 'your-token' > ~/.htb-token"
+        "Set HTB_TOKEN environment variable or run:\n"
+        "  htb auth set"
     )
+
+
+def get_token_source() -> str | None:
+    """Return the current token source (env, keyring, file) if available."""
+    try:
+        _, source = resolve_token()
+        return source
+    except FileNotFoundError:
+        return None
+
+
+def get_token_file_path() -> Path:
+    """Return the token file path (XDG config)."""
+    config_dir = Path(user_config_dir("htb-cli", "htb"))
+    return config_dir / "token"
+
+
+def set_token(token: str) -> str:
+    """Persist token to keyring if available, otherwise config file."""
+    if not token or not token.strip():
+        raise ValueError("Token cannot be empty")
+
+    token = token.strip()
+
+    if keyring is not None:
+        try:
+            keyring.set_password(KEYRING_SERVICE, KEYRING_USER, token)
+            return "keyring"
+        except Exception:
+            pass
+
+    token_path = get_token_file_path()
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    token_path.write_text(token + "\n")
+    chmod(token_path, 0o600)
+    return "file"
+
+
+def unset_token() -> dict[str, bool]:
+    """Remove token from keyring and config file."""
+    removed = {"keyring": False, "file": False}
+
+    if keyring is not None:
+        try:
+            keyring.delete_password(KEYRING_SERVICE, KEYRING_USER)
+            removed["keyring"] = True
+        except Exception:
+            pass
+
+    token_path = get_token_file_path()
+    if token_path.exists():
+        token_path.unlink()
+        removed["file"] = True
+
+    return removed
 
 
 def load_config() -> Config:
