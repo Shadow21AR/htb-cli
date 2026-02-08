@@ -17,6 +17,41 @@ from rich.table import Table
 
 console = Console()
 
+def _pick(d: dict, *keys: str):
+    """Return the first present (non-None) value for any key in keys."""
+    for k in keys:
+        if k in d and d[k] is not None:
+            return d[k]
+    return None
+
+
+def _unwrap_machine_obj(obj: Any) -> dict:
+    """
+    Best-effort normalization for machine-ish payloads across endpoints.
+
+    Some endpoints return bare machine dicts, others wrap under "data"/"info",
+    and season endpoints may nest under "machine"/"box".
+    """
+    if not isinstance(obj, dict):
+        return {}
+
+    # Common wrappers
+    if isinstance(obj.get("data"), dict):
+        obj = obj["data"]
+    if isinstance(obj.get("info"), dict):
+        obj = obj["info"]
+
+    # Season-like wrappers
+    for k in ("machine", "box"):
+        v = obj.get(k)
+        if isinstance(v, dict):
+            obj = v
+            if isinstance(obj.get("info"), dict):
+                obj = obj["info"]
+            break
+
+    return obj if isinstance(obj, dict) else {}
+
 
 def sanitize_text(value: Any) -> str:
     """Strip non-printable and control characters from a value, keeping normal text."""
@@ -91,23 +126,24 @@ def print_machines(machines: list[dict], title: str = "Machines", show_rating: b
         return
 
     if show_rating:
-        columns = ["ID", "Name", "OS", "Difficulty", "Rating", "Free"]
+        columns = ["ID", "Name", "OS", "Difficulty", "Rating"]
     else:
         columns = ["ID", "Name", "OS", "Difficulty"]
     table = create_table(columns, title)
 
     for m in machines:
-        data = m.get("data", m)
-        if isinstance(data, dict):
+        data = _unwrap_machine_obj(m)
+        if data:
             row = [
-                str(data.get("id", "?")),
-                sanitize_text(data.get("name", "?")),
-                sanitize_text(data.get("os", "?")),
-                sanitize_text(data.get("difficultyText", data.get("difficulty", "?"))),
+                str(_pick(data, "id", "machine_id", "machineId", "box_id") or "?"),
+                sanitize_text(_pick(data, "name", "machine_name", "machineName", "value") or "?"),
+                sanitize_text(_pick(data, "os", "os_name", "osName") or "?"),
+                sanitize_text(
+                    _pick(data, "difficultyText", "difficulty_text", "difficulty", "difficultyTextShort") or "?"
+                ),
             ]
             if show_rating:
-                row.append(str(data.get("star", data.get("rating", "?"))))
-                row.append("✓" if data.get("free") else "✗")
+                row.append(str(_pick(data, "star", "stars", "rating", "avg_rating", "avgRating") or "?"))
             table.add_row(*row)
 
     console.print(table)
@@ -115,20 +151,23 @@ def print_machines(machines: list[dict], title: str = "Machines", show_rating: b
 
 def print_machine(machine: dict) -> None:
     """Print single machine details."""
-    data = machine.get("data", machine).get("info", machine.get("data", machine))
+    data = _unwrap_machine_obj(machine)
 
     info = {
-        "ID": data.get("id"),
-        "Name": data.get("name"),
-        "OS": data.get("os"),
-        "Difficulty": data.get("difficultyText", data.get("difficulty")),
-        "IP": data.get("ip", "Not spawned"),
-        "Rating": data.get("star", data.get("stars")),
-        "Points": data.get("points"),
+        "ID": _pick(data, "id", "machine_id", "machineId", "box_id"),
+        "Name": _pick(data, "name", "machine_name", "machineName", "value"),
+        "OS": _pick(data, "os", "os_name", "osName"),
+        "Difficulty": _pick(data, "difficultyText", "difficulty_text", "difficulty", "difficultyTextShort"),
+        "IP": _pick(data, "ip", "ip4", "ip_address") or "Not spawned",
+        "Rating": _pick(data, "star", "stars", "rating", "avg_rating", "avgRating"),
+        "Points": _pick(data, "points", "score"),
+        "Lab Server": _pick(data, "lab_server", "labServer") or _pick(machine, "lab_server", "labServer"),
+        "VPN Server ID": _pick(data, "vpn_server_id", "vpnServerId") or _pick(machine, "vpn_server_id", "vpnServerId"),
     }
 
     info = {k: v for k, v in info.items() if v is not None}
-    print_key_value(info, f"Machine: {sanitize_text(data.get('name', 'Unknown'))}")
+    title_name = _pick(data, "name", "machine_name", "machineName", "value") or "Unknown"
+    print_key_value(info, f"Machine: {sanitize_text(title_name)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

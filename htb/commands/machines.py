@@ -9,6 +9,7 @@ Commands:
 - htb machine stop      - Terminate active machine
 - htb machine reset     - Reset active machine
 - htb machine own       - Submit flag
+- htb machine achievement NAME  - Print shareable achievement URL for a machine
 """
 
 from enum import Enum
@@ -30,6 +31,11 @@ from ..formatters import (
 )
 
 app = typer.Typer(help="Machine management")
+
+def _is_auth_error(e: HTBError) -> bool:
+    # Covers both API auth errors and local token-missing error wrapped as HTBError.
+    msg = (e.message or "").lower()
+    return "no htb token found" in msg or "authentication failed" in msg
 
 
 class Difficulty(str, Enum):
@@ -54,7 +60,10 @@ def _find_machine_by_name(name: str) -> dict | None:
         # Try profile endpoint first (works with machine names/slugs)
         data = api_get(f"/machine/profile/{name}")
         return data.get("info", data)
-    except HTBError:
+    except HTBError as e:
+        # Do not mask auth/token errors as "not found".
+        if _is_auth_error(e):
+            raise
         pass
 
     # Fallback to searching paginated list
@@ -66,7 +75,9 @@ def _find_machine_by_name(name: str) -> dict | None:
             if m.get("name", "").lower() == name_lower:
                 return m
         return None
-    except HTBError:
+    except HTBError as e:
+        if _is_auth_error(e):
+            raise
         return None
 
 
@@ -80,6 +91,15 @@ def _resolve_machine_id(name_or_id: str) -> int:
         return machine["id"]
 
     raise HTBError(f"Machine not found: {name_or_id}")
+
+def _resolve_user_id() -> int:
+    """Resolve current user ID via /user/info."""
+    data = api_get("/user/info")
+    info = data.get("info", {})
+    user_id = info.get("id")
+    if not user_id:
+        raise HTBError("Could not determine user ID from /user/info")
+    return int(user_id)
 
 
 @app.command("list")
@@ -127,6 +147,51 @@ def list_machines(
                 current = info.get("current_page", page)
                 last = info.get("last_page", "?")
                 console.print(f"\n[dim]Page {current}/{last} (Total: {total})[/dim]")
+
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+@app.command("achievement")
+def achievement(
+    name: Optional[str] = typer.Argument(None, help="Machine name or ID (default: active machine)"),
+    user_id: Optional[int] = typer.Option(
+        None, "--user-id", help="Override user ID (defaults to current user)"
+    ),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Print shareable achievement URL for a machine."""
+    try:
+        if name:
+            machine_id = _resolve_machine_id(name)
+            target_name = name
+        else:
+            active_data = api_get("/machine/active")
+            info = active_data.get("info") if isinstance(active_data, dict) else None
+            if not info:
+                raise HTBError("No active machine")
+            machine_id = info.get("id")
+            if not machine_id:
+                raise HTBError("Could not determine active machine ID")
+            target_name = info.get("name") or "active"
+
+        resolved_user_id = int(user_id) if user_id is not None else _resolve_user_id()
+
+        url = f"https://labs.hackthebox.com/achievement/machine/{resolved_user_id}/{machine_id}"
+
+        if raw:
+            print_json(
+                {
+                    "target_type": "machine",
+                    "user_id": resolved_user_id,
+                    "target_id": machine_id,
+                    "target_name": target_name,
+                    "url": url,
+                }
+            )
+            return
+
+        console.print(f"[cyan]Achievement URL:[/cyan] {sanitize_text(url)}")
 
     except HTBError as e:
         print_error(e.message)

@@ -81,13 +81,14 @@ class HTBClient:
 
                 return response
 
-            except (httpx.TimeoutException, httpx.HTTPStatusError) as e:
+            except (httpx.TimeoutException, httpx.HTTPStatusError, httpx.RequestError) as e:
                 last_error = e
                 if attempt < self.config.max_retries - 1:
                     # Exponential backoff: 1s, 2s, 4s...
                     time.sleep(2 ** attempt)
                     continue
-                raise
+                # Raise a clean HTBError rather than leaking a transport traceback.
+                raise HTBError(f"Network error: {e}") from e
 
         raise last_error or HTBError("Request failed after retries")
 

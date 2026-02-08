@@ -77,6 +77,8 @@ htb machine info 811
 htb machine spawn Gavel              # By name
 htb machine spawn 811                # By ID
 htb machine active
+htb machine achievement Gavel        # Shareable achievement URL
+htb machine achievement              # Uses active machine
 htb machine stop
 htb machine reset
 htb machine own 'flag'
