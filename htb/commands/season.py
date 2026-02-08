@@ -94,7 +94,22 @@ def active_machines(
         if raw:
             print_json(data)
         else:
-            machines = data.get("data", [])
+            # This endpoint has been observed to return either:
+            # - {"data": [...]} (dict wrapper)
+            # - [...] (bare list)
+            machines: list[dict] = []
+            if isinstance(data, list):
+                machines = data
+            elif isinstance(data, dict):
+                payload = data.get("data", data.get("machines", data.get("info", [])))
+                if isinstance(payload, list):
+                    machines = payload
+                elif isinstance(payload, dict):
+                    nested = payload.get("machines")
+                    if isinstance(nested, list):
+                        machines = nested
+                    else:
+                        machines = [payload]
             print_machines(machines, "Active Season Machines")
 
     except HTBError as e:

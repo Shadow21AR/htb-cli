@@ -55,17 +55,18 @@ def test_config_from_file(tmp_path, monkeypatch):
     assert token == "file-token"
 
 
-def test_missing_token_raises_htb_error(monkeypatch):
+def test_missing_token_raises_htb_error(tmp_path, monkeypatch):
     """Ensure missing token raises HTBError (not FileNotFoundError)."""
     from htb import client as htb_client
-    from htb.config import get_token_file_path
+    from htb import config as cfg
 
     # Force no env token and no keyring
     monkeypatch.delenv("HTB_TOKEN", raising=False)
-    monkeypatch.setattr("htb.config.keyring", None)
+    monkeypatch.setattr(cfg, "keyring", None)
+    monkeypatch.setattr(cfg, "user_config_dir", lambda *args, **kwargs: str(tmp_path))
 
     # Ensure no token file
-    token_path = get_token_file_path()
+    token_path = cfg.get_token_file_path()
     if token_path.exists():
         token_path.unlink()
 
