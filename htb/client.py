@@ -93,9 +93,11 @@ class HTBClient:
                         time.sleep(2 ** attempt)
                     continue
                 msg = str(e)
+                status_code = None
                 if isinstance(e, httpx.HTTPStatusError):
                     msg = e.args[0] if e.args else f"Server error: {e.response.status_code}"
-                raise HTBError(msg) from e
+                    status_code = e.response.status_code
+                raise HTBError(msg, status_code=status_code) from e
 
         raise last_error or HTBError("Request failed after retries")
 
