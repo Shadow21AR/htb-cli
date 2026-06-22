@@ -193,7 +193,7 @@ def start(
     """Start a challenge (spawn docker container)."""
     try:
         challenge_id = _resolve_challenge_id(name)
-        data = api_post("/challenge/start", {"challenge_id": challenge_id})
+        data = api_post("/container/start", {"challenge_id": challenge_id})
 
         if raw:
             print_json(data)
@@ -218,7 +218,7 @@ def stop(
     """Stop a running challenge."""
     try:
         challenge_id = _resolve_challenge_id(name)
-        data = api_post("/challenge/stop", {"challenge_id": challenge_id})
+        data = api_post("/container/stop", {"challenge_id": challenge_id})
 
         if raw:
             print_json(data)

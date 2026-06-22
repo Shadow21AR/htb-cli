@@ -40,23 +40,11 @@ class Product(str, Enum):
 
 @app.command("status")
 def status(
-    product: Optional[Product] = typer.Argument(None, help="Filter by product type"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Show current VPN connection status."""
     try:
-        # The status endpoint uses slightly different product names than servers
-        _status_product_map = {
-            "labs": "lab",
-            "competitive": "competitive",
-            "fortresses": "fortresses",
-            "starting_point": "starting_point",
-        }
-        if product:
-            status_name = _status_product_map.get(product.value, product.value)
-            data = api_get(f"/connection/status/{status_name}")
-        else:
-            data = api_get("/connection/status")
+        data = api_get("/connection/status")
 
         if raw:
             print_json(data)
@@ -112,27 +100,28 @@ def connections(
 ):
     """Show all active connections across products."""
     try:
-        data = api_get("/connections")
+        data = api_get("/v5/connections")
 
         if raw:
             print_json(data)
             return
 
-        # Display each product's connection
-        for product_name, product_data in data.get("data", {}).items():
-            if isinstance(product_data, dict) and product_data.get("assigned_server"):
-                srv = product_data["assigned_server"]
+        # Display each product's connection (v5 returns a list under "data")
+        for item in data.get("data", []):
+            srv = item.get("assigned_server")
+            if srv:
                 info = {
-                    "Product": product_name.replace("_", " ").title(),
+                    "Product": item.get("type", "").replace("_", " ").title(),
                     "Server": srv.get("friendly_name"),
                     "Server ID": srv.get("id"),
                     "Users": srv.get("current_clients"),
-                    "Location": product_data.get("location_type_friendly"),
+                    "Location": item.get("location_type_friendly"),
                 }
-                if product_data.get("machine"):
-                    info["Machine"] = product_data["machine"].get("name")
+                pro_lab = item.get("pro_lab")
+                if pro_lab:
+                    info["Pro Lab"] = pro_lab.get("name")
 
-                print_key_value(info, product_name.upper())
+                print_key_value(info, item.get("type", "UNKNOWN").upper())
                 console.print()
 
     except HTBError as e:

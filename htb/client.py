@@ -71,10 +71,15 @@ class HTBClient:
             try:
                 response = self._client.request(method, url, **kwargs)
 
-                # Retry on 5xx errors
+                # Retry on 5xx errors, but try to extract a message from the body
                 if response.status_code >= 500:
+                    try:
+                        body = response.json()
+                        msg = body.get("message") or body.get("error") or f"Server error: {response.status_code}"
+                    except Exception:
+                        msg = f"Server error: {response.status_code}"
                     raise httpx.HTTPStatusError(
-                        f"Server error: {response.status_code}",
+                        msg,
                         request=response.request,
                         response=response,
                     )
@@ -84,11 +89,13 @@ class HTBClient:
             except (httpx.TimeoutException, httpx.HTTPStatusError, httpx.RequestError) as e:
                 last_error = e
                 if attempt < self.config.max_retries - 1:
-                    # Exponential backoff: 1s, 2s, 4s...
-                    time.sleep(2 ** attempt)
+                    if not isinstance(e, httpx.HTTPStatusError):
+                        time.sleep(2 ** attempt)
                     continue
-                # Raise a clean HTBError rather than leaking a transport traceback.
-                raise HTBError(f"Network error: {e}") from e
+                msg = str(e)
+                if isinstance(e, httpx.HTTPStatusError):
+                    msg = e.args[0] if e.args else f"Server error: {e.response.status_code}"
+                raise HTBError(msg) from e
 
         raise last_error or HTBError("Request failed after retries")
 

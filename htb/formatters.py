@@ -161,6 +161,7 @@ def print_machine(machine: dict) -> None:
         "IP": _pick(data, "ip", "ip4", "ip_address") or "Not spawned",
         "Rating": _pick(data, "star", "stars", "rating", "avg_rating", "avgRating"),
         "Points": _pick(data, "points", "score"),
+        "Description": _pick(data, "info_status", "synopsis"),
         "Lab Server": _pick(data, "lab_server", "labServer") or _pick(machine, "lab_server", "labServer"),
         "VPN Server ID": _pick(data, "vpn_server_id", "vpnServerId") or _pick(machine, "vpn_server_id", "vpnServerId"),
     }

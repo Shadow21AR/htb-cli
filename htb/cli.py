@@ -31,7 +31,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import auth, challenges, machines, season, sherlocks, vpn
+from .commands import auth, challenges, machines, season, sherlocks, test as test_cmd, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 
 console = Console()
@@ -50,6 +50,7 @@ app.add_typer(season.app, name="season")
 app.add_typer(challenges.app, name="challenge")
 app.add_typer(sherlocks.app, name="sherlock")
 app.add_typer(auth.app, name="auth")
+app.add_typer(test_cmd.app, name="test")
 
 
 @app.command("status")
@@ -91,6 +92,9 @@ def status(
             console.print(f"  OS: {sanitize_text(machine_info.get('os'))}")
             console.print(f"  IP: {sanitize_text(machine_info.get('ip', 'Not assigned'))}")
             console.print(f"  Difficulty: {sanitize_text(machine_info.get('difficultyText'))}")
+            desc = machine_info.get("info_status") or machine_info.get("synopsis")
+            if desc:
+                console.print(f"  Description: {sanitize_text(desc)}")
         else:
             console.print("[dim]No active machine[/dim]")
 

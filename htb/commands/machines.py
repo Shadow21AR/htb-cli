@@ -359,7 +359,7 @@ def unreleased(
 ):
     """Show upcoming unreleased machines."""
     try:
-        data = api_get("/machine/unreleased", {"per_page": per_page, "page": page})
+        data = api_get("/v5/machines", {"per_page": per_page, "page": page})
 
         if raw:
             print_json(data)
