@@ -308,7 +308,15 @@ def download(
     """Download challenge files."""
     try:
         challenge_id = _resolve_challenge_id(name)
-        content = api_download_bytes(f"/challenge/download/{challenge_id}")
+
+        try:
+            content = api_download_bytes(f"/challenge/download/{challenge_id}")
+        except HTBError as e:
+            if e.status_code == 404:
+                print_warning("No files to download for this challenge")
+            else:
+                print_error(e.message)
+            raise typer.Exit(1)
 
         # Get challenge name for filename if not specified
         try:
@@ -414,11 +422,20 @@ def writeup(
             print_json(data)
         else:
             official = data.get("data", {}).get("official", {})
-            url = official.get("url")
-            if url:
-                console.print(f"[cyan]Writeup URL:[/cyan] {sanitize_text(url)}")
-            else:
+            api_url = official.get("url")
+            if not api_url:
                 print_warning("No writeup available")
+                return
+
+            # Fetch the actual download URL from the official endpoint
+            dl_data = api_get(f"/challenge/{challenge_id}/writeup/official")
+            dl_url = dl_data.get("url")
+            filename = official.get("filename", "writeup.pdf")
+            if dl_url:
+                console.print(f"[cyan]Writeup:[/cyan] {sanitize_text(filename)}")
+                console.print(f"[cyan]Download:[/cyan] {sanitize_text(dl_url)}")
+            else:
+                console.print(f"[cyan]Writeup URL:[/cyan] {sanitize_text(api_url)}")
 
     except HTBError as e:
         print_error(e.message)
@@ -439,6 +456,7 @@ def activity(
             print_json(data)
         else:
             activity_list = data.get("info", {}).get("activity", [])
+            activity_list.reverse()
             if not activity_list:
                 print_warning("No activity found")
                 return
