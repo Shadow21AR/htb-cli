@@ -406,11 +406,17 @@ def todo(
 @app.command("add-todo")
 def add_todo(
     name: str = typer.Argument(..., help="Machine name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Toggle a machine on your todo list."""
     try:
         machine_id = _resolve_machine_id(name)
         data = api_post(f"/machine/todo/update/{machine_id}", {})
+
+        if raw:
+            print_json(data)
+            return
+
         # Response: {"info": [{id: ...}]} when added, {"info": []} when removed
         info = data.get("info", [])
         if info:
