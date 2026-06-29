@@ -8,6 +8,8 @@ Commands:
 - htb pwnbox usage       - Show usage stats
 """
 
+from typing import Optional
+
 import typer
 
 from ..client import HTBError, api_get, api_post
@@ -28,7 +30,20 @@ def status(
         elif "message" in data:
             console.print(f"[yellow]{data['message']}[/yellow]")
         else:
-            print_key_value(data, "Pwnbox Status")
+            p = data.get("data", data)
+            info = {
+                "Hostname": p.get("hostname"),
+                "Status": p.get("status"),
+                "Location": p.get("location"),
+                "Username": p.get("username"),
+                "VNC Password": p.get("vnc_password"),
+                "Life Remaining": f"{p.get('life_remaining', 0)}m" if p.get("life_remaining") is not None else None,
+                "Expires At": str(p.get("expires_at", ""))[:19] if p.get("expires_at") else None,
+                "Proxy": p.get("proxy_url"),
+                "Spectate URL": p.get("spectate_url"),
+            }
+            info = {k: v for k, v in info.items() if v is not None}
+            print_key_value(info, "Pwnbox Status")
     except HTBError as e:
         print_error(e.message)
         raise typer.Exit(1)
@@ -36,15 +51,21 @@ def status(
 
 @app.command("start")
 def start(
+    location: str = typer.Option("us-east", "--location", "-l", help="Pwnbox region"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Start Pwnbox instance."""
     try:
-        data = api_post("/v4/pwnbox/start", {})
+        data = api_post("/v4/pwnbox/start", {"location": location})
         if raw:
             print_json(data)
         else:
-            print_success(data.get("message", "Pwnbox started"))
+            p = data.get("data", data)
+            hostname = p.get("hostname")
+            if hostname:
+                print_success(f"Pwnbox started: {hostname}")
+            else:
+                print_success(data.get("message", "Pwnbox started"))
     except HTBError as e:
         print_error(e.message)
         raise typer.Exit(1)
