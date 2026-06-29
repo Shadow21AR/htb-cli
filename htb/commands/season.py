@@ -5,7 +5,7 @@ Commands:
 - htb season list          - List seasons
 - htb season machines      - Show current season machines
 - htb season active-machines - Show active season machines
-- htb season own           - Submit flag for season points
+- htb season arena-own     - Submit flag for arena points
 - htb season rank          - Show your season ranking
 """
 
@@ -118,12 +118,12 @@ def active_machines(
         raise typer.Exit(1)
 
 
-@app.command("own")
-def own(
+@app.command("arena-own")
+def arena_own(
     flag: str = typer.Argument(..., help="Flag to submit"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
-    """Submit a flag for season points (arena)."""
+    """Submit a flag for arena points (uses active machine)."""
     try:
         # Get active machine ID first
         active_data = api_get("/machine/active")
