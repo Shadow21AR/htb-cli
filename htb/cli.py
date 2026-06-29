@@ -201,44 +201,22 @@ def search(
             print_json(data)
             return
 
-        # Display machines
         machines_list = data.get("machines", [])
-        if machines_list:
-            table = create_table(["ID", "Name"], "Machines")
-            for m in machines_list[:10]:
-                table.add_row(
-                    str(m.get("id", "?")),
-                    sanitize_text(m.get("value", m.get("name", "?"))),
-                )
-            console.print(table)
-            console.print()
-
-        # Display challenges
         challs = data.get("challenges", [])
-        if challs:
-            table = create_table(["ID", "Name", "Category"], "Challenges")
-            for c in challs[:10]:
-                table.add_row(
-                    str(c.get("id", "?")),
-                    sanitize_text(c.get("value", c.get("name", "?"))),
-                    sanitize_text(c.get("category_name", "?")),
-                )
-            console.print(table)
-            console.print()
-
-        # Display users
         users = data.get("users", [])
-        if users:
-            table = create_table(["ID", "Username"], "Users")
-            for u in users[:10]:
-                table.add_row(
-                    str(u.get("id", "?")),
-                    sanitize_text(u.get("value", u.get("name", "?"))),
-                )
-            console.print(table)
 
         if not machines_list and not challs and not users:
             console.print("[dim]No results found[/dim]")
+            return
+
+        table = create_table(["Type", "ID", "Name"], f"Search: {query}")
+        for m in machines_list[:10]:
+            table.add_row("Machine", str(m.get("id", "?")), sanitize_text(m.get("value", m.get("name", "?"))))
+        for c in challs[:10]:
+            table.add_row("Challenge", str(c.get("id", "?")), sanitize_text(c.get("value", c.get("name", "?"))))
+        for u in users[:10]:
+            table.add_row("User", str(u.get("id", "?")), sanitize_text(u.get("value", u.get("name", "?"))))
+        console.print(table)
 
     except HTBError as e:
         print_error(e.message)
