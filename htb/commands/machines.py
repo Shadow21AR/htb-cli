@@ -2,14 +2,16 @@
 Machine management commands.
 
 Commands:
-- htb machine list      - List machines
-- htb machine active    - Show active machine
-- htb machine info      - Get machine details
-- htb machine spawn     - Spawn a machine (by name or ID)
-- htb machine stop      - Terminate active machine
-- htb machine reset     - Reset active machine
-- htb machine own       - Submit flag
-- htb machine achievement NAME  - Print shareable achievement URL for a machine
+- htb machine list         - List machines (--state, --todo, --difficulty, --search, --sort)
+- htb machine active       - Show active machine
+- htb machine info         - Get machine details
+- htb machine spawn NAME   - Spawn a machine
+- htb machine stop         - Terminate active machine
+- htb machine reset        - Reset active machine
+- htb machine own FLAG     - Submit flag
+- htb machine add-todo NAME - Toggle machine on todo list
+- htb machine writeup NAME - Get official writeup URL
+- htb machine achievement NAME - Print achievement URL
 """
 
 from enum import Enum
@@ -52,6 +54,13 @@ class SortBy(str, Enum):
     difficulty = "difficulty"
     release = "release"
     rating = "rating"
+
+
+class MachineState(str, Enum):
+    """Machine list state filter."""
+    active = "active"
+    retired = "retired"
+    unreleased = "unreleased"
 
 
 def _find_machine_by_name(name: str) -> dict | None:
@@ -106,47 +115,64 @@ def _resolve_user_id() -> int:
 def list_machines(
     page: int = typer.Option(1, "--page", "-p", help="Page number"),
     per_page: int = typer.Option(20, "--per-page", "-n", help="Items per page"),
-    retired: bool = typer.Option(False, "--retired", help="Show retired machines"),
-    sort_by: Optional[SortBy] = typer.Option(None, "--sort", "-s", help="Sort by field"),
+    state: Optional[MachineState] = typer.Option(
+        MachineState.active, "--state", help="Filter by state (active, retired, unreleased)"
+    ),
+    retired: bool = typer.Option(False, "--retired", help="[deprecated] Use --state retired instead", hidden=True),
     difficulty: Optional[Difficulty] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty"),
     search: Optional[str] = typer.Option(None, "--search", "-q", help="Search by name"),
+    todo: bool = typer.Option(False, "--todo", "-t", help="Show only todo-listed machines"),
+    sort_by: Optional[SortBy] = typer.Option(None, "--sort", "-s", help="Sort by field"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """List available machines."""
     try:
-        params = {
-            "page": page,
-            "per_page": per_page,
-        }
+        effective_state = MachineState.retired if retired else (state or MachineState.active)
 
-        if retired:
-            endpoint = "/machine/list/retired/paginated"
+        if effective_state == MachineState.unreleased:
+            data = api_get("/v5/machines", {"per_page": per_page, "page": page})
+        elif effective_state == MachineState.retired:
+            data = api_get("/machine/list/retired/paginated", {
+                "page": page,
+                "per_page": per_page,
+            })
         else:
-            endpoint = "/machine/paginated"
-
-        if sort_by:
-            params["sort_by"] = sort_by.value
-        if difficulty:
-            params["difficulty[]"] = difficulty.value
-        if search:
-            params["keyword"] = search
-
-        data = api_get(endpoint, params)
+            params = {
+                "page": page,
+                "per_page": per_page,
+            }
+            if sort_by:
+                params["sort_by"] = sort_by.value
+            if difficulty:
+                params["difficulty[]"] = difficulty.value
+            if search:
+                params["keyword"] = search
+            data = api_get("/machine/paginated", params)
 
         if raw:
             print_json(data)
-        else:
-            machines = data.get("data", [])
-            title = "Retired Machines" if retired else "Active Machines"
-            print_machines(machines, title)
+            return
 
-            # Show pagination info
-            info = data.get("meta", data.get("links", {}))
-            if info:
-                total = info.get("total", "?")
-                current = info.get("current_page", page)
-                last = info.get("last_page", "?")
-                console.print(f"\n[dim]Page {current}/{last} (Total: {total})[/dim]")
+        machines = data.get("data", [])
+        title = f"{effective_state.value.title()} Machines"
+
+        if todo:
+            machines = [m for m in machines if m.get("isTodo")]
+            title = "Todo List"
+
+        if not machines:
+            print_warning(f"No {effective_state.value} machines found")
+            return
+
+        print_machines(machines, title)
+
+        # Show pagination info
+        info = data.get("meta", data.get("links", {}))
+        if info:
+            total = info.get("total", "?")
+            current = info.get("current_page", page)
+            last = info.get("last_page", "?")
+            console.print(f"\n[dim]Page {current}/{last} (Total: {total})[/dim]")
 
     except HTBError as e:
         print_error(e.message)
@@ -345,58 +371,6 @@ def own(
             print_json(data)
         else:
             print_flag_result(data)
-
-    except HTBError as e:
-        print_error(e.message)
-        raise typer.Exit(1)
-
-
-@app.command("unreleased")
-def unreleased(
-    per_page: int = typer.Option(10, "--per-page", "-n", help="Items per page"),
-    page: int = typer.Option(1, "--page", "-p", help="Page number"),
-    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
-):
-    """Show upcoming unreleased machines."""
-    try:
-        data = api_get("/v5/machines", {"per_page": per_page, "page": page})
-
-        if raw:
-            print_json(data)
-        else:
-            machines = data.get("data", [])
-            print_machines(machines, "Upcoming Machines", show_rating=False)
-
-    except HTBError as e:
-        print_error(e.message)
-        raise typer.Exit(1)
-
-
-@app.command("todo")
-def todo(
-    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
-):
-    """Show machines on your todo list."""
-    try:
-        # Fetch all active machines and filter by isTodo flag
-        all_todos = []
-        page = 1
-        while True:
-            data = api_get("/machine/paginated", {"per_page": 100, "page": page})
-            machines = data.get("data", [])
-            all_todos.extend(m for m in machines if m.get("isTodo"))
-            meta = data.get("meta", {})
-            if page >= meta.get("last_page", 1):
-                break
-            page += 1
-
-        if raw:
-            print_json(all_todos)
-        else:
-            if not all_todos:
-                print_warning("No machines on your todo list")
-                return
-            print_machines(all_todos, "Todo List")
 
     except HTBError as e:
         print_error(e.message)

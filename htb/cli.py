@@ -2,26 +2,48 @@
 HTB CLI - Command Line Interface for Hack The Box Labs.
 
 Usage:
-    htb status              Quick status overview
-    htb whoami              Show current user info
+    htb status                    Quick status overview
+    htb whoami                    Show current user info
+    htb search QUERY              Global search
 
-    htb machine list        List available machines
-    htb machine spawn NAME  Spawn a machine by name
-    htb machine own FLAG    Submit flag
+    htb machine list              List machines (--state, --todo, etc.)
+    htb machine spawn NAME        Spawn a machine
+    htb machine own FLAG          Submit flag
+    htb machine stop              Terminate active machine
+    htb machine reset             Reset active machine
+    htb machine active            Show active machine
+    htb machine info NAME         Get machine details
+    htb machine writeup NAME      Get writeup URL
+    htb machine add-todo NAME     Toggle todo
+    htb machine achievement NAME  Print achievement URL
 
-    htb challenge list      List challenges
-    htb challenge start ID  Start challenge docker
-    htb challenge own FLAG  Submit challenge flag
+    htb challenge list            List challenges
+    htb challenge info NAME       Get challenge details
+    htb challenge start NAME      Start challenge docker
+    htb challenge stop [NAME]     Stop running docker
+    htb challenge own FLAG        Submit flag
+    htb challenge download NAME   Download files
+    htb challenge active          Show running docker
+    htb challenge categories      List categories
 
-    htb sherlock list       List sherlocks (DFIR)
-    htb sherlock own FLAG   Submit sherlock answer
+    htb sherlock list             List sherlocks
+    htb sherlock info NAME        Get sherlock details
+    htb sherlock tasks NAME       Show tasks/questions
+    htb sherlock download NAME    Download files
+    htb sherlock own NAME FLAG    Submit answer
 
-    htb vpn status          Show VPN connection status
-    htb vpn servers         List available VPN servers
-    htb vpn download ID     Download VPN config file
+    htb vpn status                Show VPN status
+    htb vpn servers               List VPN servers
+    htb vpn connections           Show all active connections
+    htb vpn switch ID             Switch VPN server
+    htb vpn download ID           Download VPN config
 
-    htb season list         List seasons
-    htb season machines     Show current season machines
+    htb season list               List seasons
+    htb season machines           Show season machines
+    htb season active-machines    Show active season machines
+    htb season arena-own FLAG     Submit arena flag
+    htb season rank [ID]          Show season ranking
+    htb season leaderboard [ID]   Show season leaderboard
 
 All commands support --raw/-r for JSON output.
 """
