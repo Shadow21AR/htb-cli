@@ -41,7 +41,7 @@ Usage:
     htb season list               List seasons
     htb season machines           Show season machines
     htb season active-machines    Show active season machines
-    htb season arena-own FLAG     Submit arena flag
+    htb season own FLAG           Submit arena flag
     htb season rank [ID]          Show season ranking
     htb season leaderboard [ID]   Show season leaderboard
 

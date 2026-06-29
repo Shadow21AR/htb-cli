@@ -130,7 +130,7 @@ def list_machines(
         effective_state = MachineState.retired if retired else (state or MachineState.active)
 
         if effective_state == MachineState.unreleased:
-            data = api_get("/v5/machines", {"per_page": per_page, "page": page})
+            data = api_get("/v5/machines", {"per_page": per_page, "page": page, "state": "unreleased"})
         elif effective_state == MachineState.retired:
             data = api_get("/machine/list/retired/paginated", {
                 "page": page,
