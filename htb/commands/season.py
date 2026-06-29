@@ -2,10 +2,11 @@
 Season/Arena commands.
 
 Commands:
-- htb season list       - List seasons
-- htb season machines   - Show current season machines
-- htb season own        - Submit flag for season points
-- htb season rank       - Show your season ranking
+- htb season list          - List seasons
+- htb season machines      - Show current season machines
+- htb season active-machines - Show active season machines
+- htb season own           - Submit flag for season points
+- htb season rank          - Show your season ranking
 """
 
 from typing import Optional
@@ -83,7 +84,7 @@ def machines(
         raise typer.Exit(1)
 
 
-@app.command("active")
+@app.command("active-machines")
 def active_machines(
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
