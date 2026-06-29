@@ -119,7 +119,7 @@ def create_table(columns: list[str], title: str | None = None) -> Table:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def print_machines(machines: list[dict], title: str = "Machines") -> None:
+def print_machines(machines: list[dict], title: str = "Machines", active_id: int | None = None) -> None:
     """Print machine list in a table."""
     if not machines:
         print_warning("No machines found")
@@ -140,9 +140,10 @@ def print_machines(machines: list[dict], title: str = "Machines") -> None:
                     points = "?"
             user_owns = _pick(data, "userOwnsCount", "user_owns_count", "user_owns") or ""
             root_owns = _pick(data, "rootOwnsCount", "root_owns_count", "root_owns") or ""
+            machine_id = _pick(data, "id", "machine_id", "machineId", "box_id")
 
             row = [
-                str(_pick(data, "id", "machine_id", "machineId", "box_id") or "?"),
+                str(machine_id or "?"),
                 sanitize_text(_pick(data, "name", "machine_name", "machineName", "value") or "?"),
                 sanitize_text(_pick(data, "os", "os_name", "osName") or "?"),
                 sanitize_text(
@@ -153,7 +154,8 @@ def print_machines(machines: list[dict], title: str = "Machines") -> None:
                 str(user_owns),
                 str(root_owns),
             ]
-            table.add_row(*row)
+            is_active = active_id is not None and machine_id is not None and int(machine_id) == active_id
+            table.add_row(*row, style="green" if is_active else None)
 
     console.print(table)
 

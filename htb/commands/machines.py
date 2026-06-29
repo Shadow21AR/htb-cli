@@ -186,7 +186,14 @@ def list_machines(
             print_warning(f"No {state.value} machines found")
             return
 
-        print_machines(machines, title)
+        try:
+            active_data = api_get("/v5/virtual_machine/active")
+            active_info = active_data.get("info") or {}
+            active_id = active_info.get("id")
+        except HTBError:
+            active_id = None
+
+        print_machines(machines, title, active_id=active_id)
 
         meta = data.get("meta", {})
         if meta:

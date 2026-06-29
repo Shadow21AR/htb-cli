@@ -80,7 +80,13 @@ def machines(
         else:
             machines = data.get("data", [])
             title = f"Season {season_id} Machines" if season_id else "Season Machines"
-            print_machines(machines, title)
+            try:
+                active_data = api_get("/v5/virtual_machine/active")
+                active_info = active_data.get("info") or {}
+                active_id = active_info.get("id")
+            except HTBError:
+                active_id = None
+            print_machines(machines, title, active_id=active_id)
 
     except HTBError as e:
         print_error(e.message)
@@ -114,7 +120,13 @@ def active_machines(
                         machines = nested
                     else:
                         machines = [payload]
-            print_machines(machines, "Active Season Machines")
+            try:
+                active_data = api_get("/v5/virtual_machine/active")
+                active_info = active_data.get("info") or {}
+                active_id = active_info.get("id")
+            except HTBError:
+                active_id = None
+            print_machines(machines, "Active Season Machines", active_id=active_id)
 
     except HTBError as e:
         print_error(e.message)
