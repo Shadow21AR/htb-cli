@@ -8,6 +8,8 @@ Commands:
 - htb challenge stop       - Stop a challenge
 - htb challenge download   - Download challenge files
 - htb challenge own        - Submit flag
+- htb challenge writeup    - Get writeup for a challenge
+- htb challenge activity   - Show recent solves for a challenge
 """
 
 from enum import Enum
@@ -20,6 +22,7 @@ from ..client import HTBError, api_download_bytes, api_get, api_post
 from ..files import resolve_output_path
 from ..formatters import (
     console,
+    create_table,
     print_challenge,
     print_challenges,
     print_error,
@@ -86,17 +89,20 @@ class ChallengeState(str, Enum):
 
 
 def _find_challenge_by_name(name: str) -> dict | None:
-    """Find a challenge by name (case-insensitive)."""
-    try:
-        data = api_get("/challenge/list")
-        challenges = data.get("challenges", data.get("data", []))
-        name_lower = name.lower()
-        for c in challenges:
-            if c.get("name", "").lower() == name_lower:
-                return c
-        return None
-    except HTBError:
-        return None
+    """Find a challenge by name (case-insensitive, searches all states)."""
+    name_lower = name.lower()
+
+    # Try active challenges with keyword search first
+    for state in ("active", "retired", "unreleased"):
+        try:
+            data = api_get("/challenges", {"per_page": 100, "keyword": name, "state": state})
+            for c in data.get("data", []):
+                if c.get("name", "").lower() == name_lower:
+                    return c
+        except HTBError:
+            continue
+
+    return None
 
 
 def _resolve_challenge_id(name_or_id: str) -> int:
@@ -388,6 +394,63 @@ def active(
 
         for c in running:
             print_challenge(c)
+
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("writeup")
+def writeup(
+    name: str = typer.Argument(..., help="Challenge name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Get writeup for a challenge."""
+    try:
+        challenge_id = _resolve_challenge_id(name)
+        data = api_get(f"/challenge/{challenge_id}/writeup")
+
+        if raw:
+            print_json(data)
+        else:
+            official = data.get("data", {}).get("official", {})
+            url = official.get("url")
+            if url:
+                console.print(f"[cyan]Writeup URL:[/cyan] {sanitize_text(url)}")
+            else:
+                print_warning("No writeup available")
+
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("activity")
+def activity(
+    name: str = typer.Argument(..., help="Challenge name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Show recent solves for a challenge."""
+    try:
+        challenge_id = _resolve_challenge_id(name)
+        data = api_get(f"/challenge/activity/{challenge_id}")
+
+        if raw:
+            print_json(data)
+        else:
+            activity_list = data.get("info", {}).get("activity", [])
+            if not activity_list:
+                print_warning("No activity found")
+                return
+
+            table = create_table(["When", "User", "Type"], "Challenge Activity")
+            for a in activity_list:
+                table.add_row(
+                    a.get("date_diff", "?"),
+                    sanitize_text(a.get("user_name", "?")),
+                    a.get("type", "?"),
+                )
+            console.print(table)
 
     except HTBError as e:
         print_error(e.message)

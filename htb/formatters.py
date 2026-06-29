@@ -125,7 +125,7 @@ def print_machines(machines: list[dict], title: str = "Machines") -> None:
         print_warning("No machines found")
         return
 
-    table = create_table(["ID", "Name", "OS", "Difficulty", "Points", "Rating", "Solves"], title)
+    table = create_table(["ID", "Name", "OS", "Difficulty", "Points", "Rating", "User", "Root"], title)
 
     for m in machines:
         data = _unwrap_machine_obj(m)
@@ -138,7 +138,8 @@ def print_machines(machines: list[dict], title: str = "Machines") -> None:
                     points = user_pts + root_pts
                 else:
                     points = "?"
-            solves = _pick(data, "userOwnsCount", "user_owns_count", "user_owns") or ""
+            user_owns = _pick(data, "userOwnsCount", "user_owns_count", "user_owns") or ""
+            root_owns = _pick(data, "rootOwnsCount", "root_owns_count", "root_owns") or ""
 
             row = [
                 str(_pick(data, "id", "machine_id", "machineId", "box_id") or "?"),
@@ -149,7 +150,8 @@ def print_machines(machines: list[dict], title: str = "Machines") -> None:
                 ),
                 str(points),
                 str(_pick(data, "star", "stars", "rating", "avg_rating", "avgRating") or "?"),
-                str(solves),
+                str(user_owns),
+                str(root_owns),
             ]
             table.add_row(*row)
 
