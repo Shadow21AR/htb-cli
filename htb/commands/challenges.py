@@ -212,12 +212,22 @@ def start(
 
 @app.command("stop")
 def stop(
-    name: str = typer.Argument(..., help="Challenge name or ID"),
+    name: Optional[str] = typer.Argument(None, help="Challenge name or ID (optional, auto-detects active docker)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Stop a running challenge."""
     try:
-        challenge_id = _resolve_challenge_id(name)
+        if name:
+            challenge_id = _resolve_challenge_id(name)
+        else:
+            data = api_get("/challenge/list")
+            all_challenges = data.get("challenges", data.get("data", []))
+            running = [c for c in all_challenges if c.get("isActive")]
+            if not running:
+                print_error("No active challenge. Specify challenge name or ID.")
+                raise typer.Exit(1)
+            challenge_id = running[0]["id"]
+
         data = api_post("/container/stop", {"challenge_id": challenge_id})
 
         if raw:
