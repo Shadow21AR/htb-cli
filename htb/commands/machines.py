@@ -15,7 +15,7 @@ Commands:
 """
 
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -54,6 +54,7 @@ class SortBy(str, Enum):
     difficulty = "difficulty"
     release = "release"
     rating = "rating"
+    points = "points"
 
 
 class MachineState(str, Enum):
@@ -61,6 +62,20 @@ class MachineState(str, Enum):
     active = "active"
     retired = "retired"
     unreleased = "unreleased"
+
+
+class OsFilter(str, Enum):
+    """OS filter options."""
+    windows = "windows"
+    linux = "linux"
+    freebsd = "freebsd"
+    solaris = "solaris"
+
+
+class SortType(str, Enum):
+    """Sort direction."""
+    asc = "asc"
+    desc = "desc"
 
 
 def _find_machine_by_name(name: str) -> dict | None:
@@ -75,9 +90,9 @@ def _find_machine_by_name(name: str) -> dict | None:
             raise
         pass
 
-    # Fallback to searching paginated list
+    # Fallback to searching v5 machine list
     try:
-        data = api_get("/machine/paginated", {"per_page": 100, "keyword": name})
+        data = api_get("/v5/machines", {"per_page": 100, "keyword": name})
         machines = data.get("data", [])
         name_lower = name.lower()
         for m in machines:
@@ -115,63 +130,69 @@ def _resolve_user_id() -> int:
 def list_machines(
     page: int = typer.Option(1, "--page", "-p", help="Page number"),
     per_page: int = typer.Option(20, "--per-page", "-n", help="Items per page"),
-    state: Optional[MachineState] = typer.Option(
+    state: MachineState = typer.Option(
         MachineState.active, "--state", help="Filter by state (active, retired, unreleased)"
     ),
-    retired: bool = typer.Option(False, "--retired", help="[deprecated] Use --state retired instead", hidden=True),
     difficulty: Optional[Difficulty] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty"),
+    os: Optional[List[OsFilter]] = typer.Option(None, "--os", help="Filter by OS (use multiple times: --os linux --os windows)"),
     search: Optional[str] = typer.Option(None, "--search", "-q", help="Search by name"),
-    todo: bool = typer.Option(False, "--todo", "-t", help="Show only todo-listed machines"),
-    sort_by: Optional[SortBy] = typer.Option(None, "--sort", "-s", help="Sort by field"),
+    free: bool = typer.Option(False, "--free", help="Free machines only"),
+    todo: bool = typer.Option(False, "--todo", "-t", help="Todo-listed machines only"),
+    completed: bool = typer.Option(False, "--completed", help="Show only completed machines"),
+    incomplete: bool = typer.Option(False, "--incomplete", help="Show only incomplete machines"),
+    sort_by: Optional[SortBy] = typer.Option(None, "--sort", "-s", help="Sort by field (name, difficulty, release, rating, points)"),
+    sort_type: Optional[SortType] = typer.Option(None, "--sort-type", help="Sort direction (asc, desc)"),
+    sp_tier: Optional[int] = typer.Option(None, "--sp-tier", help="Starting Point tier ID"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """List available machines."""
     try:
-        effective_state = MachineState.retired if retired else (state or MachineState.active)
+        params = {
+            "page": page,
+            "per_page": per_page,
+            "state": state.value,
+        }
+        if difficulty:
+            params["difficulty"] = difficulty.value
+        if os:
+            params["os[]"] = [o.value for o in os]
+        if search:
+            params["keyword"] = search
+        if free:
+            params["free"] = "1"
+        if todo:
+            params["todo"] = "1"
+        if completed:
+            params["showCompleted"] = "complete"
+        if incomplete:
+            params["showCompleted"] = "incomplete"
+        if sort_by:
+            params["sort_by"] = sort_by.value
+        if sort_type:
+            params["sort_type"] = sort_type.value
+        if sp_tier is not None:
+            params["sp_tier"] = str(sp_tier)
 
-        if effective_state == MachineState.unreleased:
-            data = api_get("/v5/machines", {"per_page": per_page, "page": page, "state": "unreleased"})
-        elif effective_state == MachineState.retired:
-            data = api_get("/machine/list/retired/paginated", {
-                "page": page,
-                "per_page": per_page,
-            })
-        else:
-            params = {
-                "page": page,
-                "per_page": per_page,
-            }
-            if sort_by:
-                params["sort_by"] = sort_by.value
-            if difficulty:
-                params["difficulty[]"] = difficulty.value
-            if search:
-                params["keyword"] = search
-            data = api_get("/machine/paginated", params)
+        data = api_get("/v5/machines", params)
 
         if raw:
             print_json(data)
             return
 
         machines = data.get("data", [])
-        title = f"{effective_state.value.title()} Machines"
-
-        if todo:
-            machines = [m for m in machines if m.get("isTodo")]
-            title = "Todo List"
+        title = f"{state.value.title()} Machines"
 
         if not machines:
-            print_warning(f"No {effective_state.value} machines found")
+            print_warning(f"No {state.value} machines found")
             return
 
         print_machines(machines, title)
 
-        # Show pagination info
-        info = data.get("meta", data.get("links", {}))
-        if info:
-            total = info.get("total", "?")
-            current = info.get("current_page", page)
-            last = info.get("last_page", "?")
+        meta = data.get("meta", {})
+        if meta:
+            current = meta.get("current_page", page)
+            last = meta.get("last_page", "?")
+            total = meta.get("total", "?")
             console.print(f"\n[dim]Page {current}/{last} (Total: {total})[/dim]")
 
     except HTBError as e:
@@ -230,7 +251,7 @@ def active(
 ):
     """Show currently active (spawned) machine."""
     try:
-        data = api_get("/machine/active")
+        data = api_get("/v5/virtual_machine/active")
 
         if raw:
             print_json(data)

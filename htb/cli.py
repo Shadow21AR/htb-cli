@@ -2,7 +2,7 @@
 HTB CLI - Command Line Interface for Hack The Box Labs.
 
 Usage:
-    htb status                    Quick status overview
+    htb status                    Overview: user, connection, active machine
     htb whoami                    Show current user info
     htb search QUERY              Global search
 
@@ -55,6 +55,9 @@ from rich.console import Console
 from .client import HTBError
 from .commands import auth, challenges, machines, season, sherlocks, test as test_cmd, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
 
 console = Console()
 
@@ -79,46 +82,71 @@ app.add_typer(test_cmd.app, name="test")
 def status(
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
-    """Quick status: show active machine and connection."""
+    """Quick overview: user, connection, and active machine."""
     from .client import api_get
 
     try:
-        # Get connection status
-        conn = api_get("/connection/status")
-
-        # Get active machine
-        machine = api_get("/machine/active")
+        user_data = api_get("/user/info")
+        conn_data = api_get("/v5/connections")
+        machine_data = api_get("/v5/virtual_machine/active")
 
         if raw:
-            print_json({"connection": conn, "machine": machine})
+            print_json({"user": user_data, "connection": conn_data, "machine": machine_data})
             return
 
-        # Display connection info
-        if conn:
-            conn_data = conn[0] if isinstance(conn, list) and conn else conn
-            if conn_data:
-                console.print("[bold cyan]Connection[/bold cyan]")
-                server = conn_data.get("server", {})
-                if server:
-                    console.print(f"  Server: {sanitize_text(server.get('friendly_name', 'Unknown'))}")
-                ip = conn_data.get("connection", {}).get("ip4")
-                if ip:
-                    console.print(f"  IP: {sanitize_text(ip)}")
-                console.print()
+        # ── User panel ──
+        info = user_data.get("info", {})
+        user_parts = {
+            "Name": info.get("name"),
+            "Rank": info.get("rank"),
+            "Points": info.get("points"),
+            "Respects": info.get("respects"),
+        }
+        user_parts = {k: v for k, v in user_parts.items() if v is not None}
+        console.print(Panel(
+            "\n".join(f"[cyan]{k}:[/cyan] {v}" for k, v in user_parts.items()),
+            title="User",
+            box=box.ROUNDED,
+        ))
 
-        # Display machine info
-        machine_info = machine.get("info")
-        if machine_info:
-            console.print("[bold cyan]Active Machine[/bold cyan]")
-            console.print(f"  Name: {sanitize_text(machine_info.get('name'))}")
-            console.print(f"  OS: {sanitize_text(machine_info.get('os'))}")
-            console.print(f"  IP: {sanitize_text(machine_info.get('ip', 'Not assigned'))}")
-            console.print(f"  Difficulty: {sanitize_text(machine_info.get('difficultyText'))}")
-            desc = machine_info.get("info_status") or machine_info.get("synopsis")
-            if desc:
-                console.print(f"  Description: {sanitize_text(desc)}")
+        # ── Connection panel ──
+        conns = conn_data.get("data", [])
+        if conns:
+            connected = [c for c in conns if isinstance(c.get("assigned_server"), dict)]
+            if connected:
+                c = connected[0]
+                srv = c.get("assigned_server", {})
+                conn_parts = {
+                    "Server": srv.get("friendly_name"),
+                    "Location": srv.get("location"),
+                    "Type": c.get("location_type_friendly"),
+                }
+            else:
+                conn_parts = {"Status": "Not connected"}
+            console.print(Panel(
+                "\n".join(f"[cyan]{k}:[/cyan] {sanitize_text(v)}" for k, v in conn_parts.items() if v),
+                title="Connection",
+                box=box.ROUNDED,
+            ))
         else:
-            console.print("[dim]No active machine[/dim]")
+            console.print(Panel("[dim]No connection data[/dim]", title="Connection", box=box.ROUNDED))
+
+        # ── Active Machine panel ──
+        mm = machine_data.get("info")
+        if mm:
+            machine_parts = {
+                "Name": mm.get("name"),
+                "OS": mm.get("os"),
+                "IP": mm.get("ip", "Not assigned"),
+                "Difficulty": mm.get("difficultyText"),
+            }
+            console.print(Panel(
+                "\n".join(f"[cyan]{k}:[/cyan] {sanitize_text(v)}" for k, v in machine_parts.items() if v),
+                title="Active Machine",
+                box=box.ROUNDED,
+            ))
+        else:
+            console.print(Panel("[dim]No active machine[/dim]", title="Active Machine", box=box.ROUNDED))
 
     except HTBError as e:
         print_error(e.message)
