@@ -67,17 +67,20 @@ def list_seasons(
 
 @app.command("machines")
 def machines(
+    season_id: Optional[int] = typer.Option(None, "--season-id", help="Season ID (default: current)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
-    """Show current season machines."""
+    """Show machines for a season."""
     try:
-        data = api_get("/season/machines")
+        endpoint = f"/season/machines/{season_id}" if season_id else "/season/machines"
+        data = api_get(endpoint)
 
         if raw:
             print_json(data)
         else:
             machines = data.get("data", [])
-            print_machines(machines, "Season Machines")
+            title = f"Season {season_id} Machines" if season_id else "Season Machines"
+            print_machines(machines, title)
 
     except HTBError as e:
         print_error(e.message)
