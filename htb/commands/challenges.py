@@ -12,7 +12,7 @@ Commands:
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -44,22 +44,45 @@ class Difficulty(str, Enum):
 
 class Category(str, Enum):
     """Challenge categories."""
-    reversing = "reversing"
+    ai_ml = "ai/ml"
+    blockchain = "blockchain"
+    coding = "coding"
     crypto = "crypto"
-    pwn = "pwn"
-    web = "web"
     forensics = "forensics"
+    gamepwn = "gamepwn"
+    hardware = "hardware"
+    ics = "ics"
     misc = "misc"
     mobile = "mobile"
     osint = "osint"
-    hardware = "hardware"
-    blockchain = "blockchain"
-    ai_ml = "ai - ml"
-    coding = "coding"
-    gamepwn = "gamepwn"
-    ics = "ics"
+    pwn = "pwn"
     quantum = "quantum"
+    reversing = "reversing"
     secure_coding = "secure coding"
+    web = "web"
+
+
+class ChallengeSortBy(str, Enum):
+    """Sort options for challenge listing."""
+    name = "name"
+    release_date = "release_date"
+    rating = "rating"
+    user_owns = "user_owns"
+    system_owns = "system_owns"
+    user_difficulty = "user_difficulty"
+
+
+class SortDirection(str, Enum):
+    """Sort direction."""
+    asc = "asc"
+    desc = "desc"
+
+
+class ChallengeState(str, Enum):
+    """Challenge list state filter."""
+    active = "active"
+    retired = "retired"
+    unreleased = "unreleased"
 
 
 def _find_challenge_by_name(name: str) -> dict | None:
@@ -90,24 +113,50 @@ def _resolve_challenge_id(name_or_id: str) -> int:
 
 @app.command("list")
 def list_challenges(
-    category: Optional[Category] = typer.Option(None, "--category", "-c", help="Filter by category"),
-    difficulty: Optional[Difficulty] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty"),
-    retired: bool = typer.Option(False, "--retired", help="Show retired challenges"),
-    unsolved: bool = typer.Option(False, "--unsolved", "-u", help="Show only unsolved"),
+    page: int = typer.Option(1, "--page", "-p", help="Page number"),
+    per_page: int = typer.Option(20, "--per-page", "-n", help="Items per page"),
+    state: ChallengeState = typer.Option(
+        ChallengeState.active, "--state", help="Filter by state (active, retired, unreleased)"
+    ),
+    category: Optional[List[Category]] = typer.Option(None, "--category", "-c", help="Filter by category (use multiple times)"),
+    difficulty: Optional[List[Difficulty]] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty (use multiple times)"),
+    search: Optional[str] = typer.Option(None, "--search", "-q", help="Search by name"),
+    todo: bool = typer.Option(False, "--todo", "-t", help="Todo-listed challenges only"),
+    completed: bool = typer.Option(False, "--completed", help="Show only completed challenges"),
+    incomplete: bool = typer.Option(False, "--incomplete", help="Show only incomplete challenges"),
+    sort_by: Optional[ChallengeSortBy] = typer.Option(None, "--sort", "-s", help="Sort by field (name, release-date, rating, etc.)"),
+    sort_type: Optional[SortDirection] = typer.Option(None, "--sort-type", help="Sort direction"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """List available challenges."""
     try:
-        if retired:
-            data = api_get("/challenge/list/retired")
-        else:
-            data = api_get("/challenge/list")
+        params = {
+            "page": page,
+            "per_page": per_page,
+        }
+        if state.value != "active":
+            params["state"] = state.value
+        if difficulty:
+            params["difficulty[]"] = [d.value for d in difficulty]
+        if search:
+            params["keyword"] = search
+        if todo:
+            params["todo"] = "1"
+        if sort_by:
+            params["sort_by"] = sort_by.value
+        if sort_type:
+            params["sort_type"] = sort_type.value
 
-        challenges = data.get("challenges", data.get("data", []))
+        data = api_get("/challenges", params)
 
-        # The list endpoint doesn't include category_name, so build a map
-        # from challenge_category_id -> name using the categories endpoint
-        if not challenges or "category_name" not in challenges[0]:
+        if raw:
+            print_json(data)
+            return
+
+        challenges = data.get("data", [])
+
+        # Build category name map if missing
+        if challenges and "category_name" not in challenges[0]:
             try:
                 cats_data = api_get("/challenge/categories/list")
                 cat_map = {c["id"]: c["name"] for c in cats_data.get("info", [])}
@@ -116,22 +165,27 @@ def list_challenges(
             except HTBError:
                 pass
 
-        if raw:
-            print_json(data)
-            return
-
-        # Apply filters
+        # Client-side filters
         if category:
-            challenges = [c for c in challenges if c.get("category_name", "").lower() == category.value]
-
-        if difficulty:
-            challenges = [c for c in challenges if c.get("difficulty", "").lower() == difficulty.value.replace("_", " ")]
-
-        if unsolved:
+            cat_vals = {c.value for c in category}
+            challenges = [c for c in challenges if c.get("category_name", "").lower() in cat_vals]
+        if completed:
+            challenges = [c for c in challenges if c.get("isCompleted") or c.get("isSolved") or c.get("solved")]
+        if incomplete:
             challenges = [c for c in challenges if not c.get("isCompleted") and not c.get("isSolved") and not c.get("solved")]
 
-        title = "Retired Challenges" if retired else "Active Challenges"
-        print_challenges(challenges, title)
+        if not challenges:
+            print_warning("No challenges found")
+            return
+
+        print_challenges(challenges, "Challenges")
+
+        meta = data.get("meta", {})
+        if meta:
+            current = meta.get("current_page", page)
+            last = meta.get("last_page", "?")
+            total = meta.get("total", "?")
+            console.print(f"\n[dim]Page {current}/{last} (Total: {total})[/dim]")
 
     except HTBError as e:
         print_error(e.message)

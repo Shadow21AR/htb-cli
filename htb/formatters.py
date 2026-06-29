@@ -119,21 +119,27 @@ def create_table(columns: list[str], title: str | None = None) -> Table:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def print_machines(machines: list[dict], title: str = "Machines", show_rating: bool = True) -> None:
+def print_machines(machines: list[dict], title: str = "Machines") -> None:
     """Print machine list in a table."""
     if not machines:
         print_warning("No machines found")
         return
 
-    if show_rating:
-        columns = ["ID", "Name", "OS", "Difficulty", "Rating"]
-    else:
-        columns = ["ID", "Name", "OS", "Difficulty"]
-    table = create_table(columns, title)
+    table = create_table(["ID", "Name", "OS", "Difficulty", "Points", "Rating", "Solves"], title)
 
     for m in machines:
         data = _unwrap_machine_obj(m)
         if data:
+            points = _pick(data, "points")
+            if points is None:
+                user_pts = data.get("user_points")
+                root_pts = data.get("root_points")
+                if user_pts is not None and root_pts is not None:
+                    points = user_pts + root_pts
+                else:
+                    points = "?"
+            solves = _pick(data, "userOwnsCount", "user_owns_count", "user_owns") or ""
+
             row = [
                 str(_pick(data, "id", "machine_id", "machineId", "box_id") or "?"),
                 sanitize_text(_pick(data, "name", "machine_name", "machineName", "value") or "?"),
@@ -141,9 +147,10 @@ def print_machines(machines: list[dict], title: str = "Machines", show_rating: b
                 sanitize_text(
                     _pick(data, "difficultyText", "difficulty_text", "difficulty", "difficultyTextShort") or "?"
                 ),
+                str(points),
+                str(_pick(data, "star", "stars", "rating", "avg_rating", "avgRating") or "?"),
+                str(solves),
             ]
-            if show_rating:
-                row.append(str(_pick(data, "star", "stars", "rating", "avg_rating", "avgRating") or "?"))
             table.add_row(*row)
 
     console.print(table)
@@ -182,7 +189,7 @@ def print_challenges(challenges: list[dict], title: str = "Challenges") -> None:
         print_warning("No challenges found")
         return
 
-    table = create_table(["ID", "Name", "Category", "Difficulty", "Points", "Solves"], title)
+    table = create_table(["ID", "Name", "Category", "Difficulty", "Rating", "Solves"], title)
 
     for c in challenges:
         table.add_row(
@@ -190,7 +197,7 @@ def print_challenges(challenges: list[dict], title: str = "Challenges") -> None:
             sanitize_text(c.get("name", "?")),
             sanitize_text(c.get("category_name", c.get("category", "?"))),
             sanitize_text(c.get("difficulty", "?")),
-            str(c.get("points", "?")),
+            str(c.get("rating", "?")),
             str(c.get("solves", "?")),
         )
 
