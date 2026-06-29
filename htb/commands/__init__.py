@@ -1,6 +1,6 @@
 """HTB CLI commands."""
 
-from . import auth, challenges, dashboard, machines, profile, season, sherlocks, test, vpn
+from . import auth, challenges, dashboard, machines, profile, pwnbox, season, sherlocks, test, vpn
 
 __all__ = [
     "auth",
@@ -11,5 +11,6 @@ __all__ = [
     "sherlocks",
     "dashboard",
     "profile",
+    "pwnbox",
     "test",
 ]

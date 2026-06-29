@@ -56,6 +56,13 @@ Usage:
     htb profile activity ID       View user's recent activity
     htb profile content ID        View user's solves/owns
 
+    htb profile content ID        View user's solves/owns
+
+    htb pwnbox status             Show Pwnbox status
+    htb pwnbox start              Start Pwnbox
+    htb pwnbox stop               Stop Pwnbox
+    htb pwnbox usage              Show usage stats
+
 All commands support --raw/-r for JSON output.
 """
 
@@ -64,7 +71,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import auth, challenges, dashboard, machines, profile, season, sherlocks, test as test_cmd, vpn
+from .commands import auth, challenges, dashboard, machines, profile, pwnbox, season, sherlocks, test as test_cmd, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 from rich import box
 from rich.console import Console
@@ -87,6 +94,7 @@ app.add_typer(challenges.app, name="challenge")
 app.add_typer(sherlocks.app, name="sherlock")
 app.add_typer(dashboard.app, name="dashboard")
 app.add_typer(profile.app, name="profile")
+app.add_typer(pwnbox.app, name="pwnbox")
 app.add_typer(auth.app, name="auth")
 app.add_typer(test_cmd.app, name="test")
 
