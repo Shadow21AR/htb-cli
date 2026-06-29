@@ -2,10 +2,10 @@
 Profile commands.
 
 Commands:
-- htb profile basic <id>     - View user's profile
-- htb profile badges <id>    - View user's badges
-- htb profile activity <id>  - View user's recent activity
-- htb profile content <id>   - View user's solves/owns
+- htb profile basic [id]     - View user's profile (defaults to self)
+- htb profile badges [id]    - View user's badges
+- htb profile activity [id]  - View user's recent activity
+- htb profile content [id]   - View user's solves/owns
 """
 
 from typing import Optional
@@ -24,15 +24,30 @@ from ..formatters import (
 
 app = typer.Typer(help="User profile")
 
+_INFO_CACHE: dict | None = None
+
+
+def _my_id() -> int:
+    """Get current user's ID."""
+    global _INFO_CACHE
+    if _INFO_CACHE is None:
+        _INFO_CACHE = api_get("/user/info").get("info", {})
+    return _INFO_CACHE["id"]
+
+
+def _resolve_id(user_id: int | None) -> int:
+    return user_id if user_id is not None else _my_id()
+
 
 @app.command("basic")
 def basic(
-    user_id: int = typer.Argument(..., help="User ID"),
+    user_id: Optional[int] = typer.Argument(None, help="User ID (default: self)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """View a user's profile."""
     try:
-        data = api_get(f"/v4/user/profile/basic/{user_id}")
+        uid = _resolve_id(user_id)
+        data = api_get(f"/v4/user/profile/basic/{uid}")
         if raw:
             print_json(data)
             return
@@ -42,7 +57,7 @@ def basic(
             print_error("User not found")
             raise typer.Exit(1)
 
-        team = profile.get("team", {})
+        team = profile.get("team") or {}
         info = {
             "Name": profile.get("name"),
             "Rank": profile.get("rank"),
@@ -56,7 +71,7 @@ def basic(
             "Joined": str(profile.get("joined_date", ""))[:10] if profile.get("joined_date") else None,
         }
         info = {k: v for k, v in info.items() if v is not None}
-        print_key_value(info, f"User: {profile.get('name', user_id)}")
+        print_key_value(info, f"User: {profile.get('name', uid)}")
 
     except HTBError as e:
         print_error(e.message)
@@ -65,12 +80,13 @@ def basic(
 
 @app.command("badges")
 def badges(
-    user_id: int = typer.Argument(..., help="User ID"),
+    user_id: Optional[int] = typer.Argument(None, help="User ID (default: self)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """View a user's badges."""
     try:
-        data = api_get(f"/v4/user/profile/badges/{user_id}")
+        uid = _resolve_id(user_id)
+        data = api_get(f"/v4/user/profile/badges/{uid}")
         if raw:
             print_json(data)
             return
@@ -95,13 +111,14 @@ def badges(
 
 @app.command("activity")
 def activity(
-    user_id: int = typer.Argument(..., help="User ID"),
+    user_id: Optional[int] = typer.Argument(None, help="User ID (default: self)"),
     page: int = typer.Option(1, "--page", "-p", help="Page number"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """View a user's recent activity (solves)."""
     try:
-        data = api_get(f"/v5/user/profile/activity/{user_id}", {"page": page})
+        uid = _resolve_id(user_id)
+        data = api_get(f"/v5/user/profile/activity/{uid}", {"page": page})
         if raw:
             print_json(data)
             return
@@ -134,13 +151,14 @@ def activity(
 
 @app.command("content")
 def content(
-    user_id: int = typer.Argument(..., help="User ID"),
+    user_id: Optional[int] = typer.Argument(None, help="User ID (default: self)"),
     type: str = typer.Option("machine", "--type", "-t", help="Content type: machine, challenge, sherlock"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """View a user's solves/owns by content type."""
     try:
-        data = api_get(f"/v5/user/profile/content/{user_id}", {"type": type})
+        uid = _resolve_id(user_id)
+        data = api_get(f"/v5/user/profile/content/{uid}", {"type": type})
         if raw:
             print_json(data)
             return
