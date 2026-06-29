@@ -45,6 +45,17 @@ Usage:
     htb season rank [ID]          Show season ranking
     htb season leaderboard [ID]   Show season leaderboard
 
+    htb season leaderboard [ID]   Show season leaderboard
+
+    htb dashboard favorites       Show favorite/owned items
+    htb dashboard inprogress      Show in-progress items
+    htb dashboard recommended     Show recommended items
+
+    htb profile basic ID          View user's profile
+    htb profile badges ID         View user's badges
+    htb profile activity ID       View user's recent activity
+    htb profile content ID        View user's solves/owns
+
 All commands support --raw/-r for JSON output.
 """
 
@@ -53,7 +64,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import auth, challenges, machines, season, sherlocks, test as test_cmd, vpn
+from .commands import auth, challenges, dashboard, machines, profile, season, sherlocks, test as test_cmd, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 from rich import box
 from rich.console import Console
@@ -74,6 +85,8 @@ app.add_typer(machines.app, name="machine")
 app.add_typer(season.app, name="season")
 app.add_typer(challenges.app, name="challenge")
 app.add_typer(sherlocks.app, name="sherlock")
+app.add_typer(dashboard.app, name="dashboard")
+app.add_typer(profile.app, name="profile")
 app.add_typer(auth.app, name="auth")
 app.add_typer(test_cmd.app, name="test")
 
