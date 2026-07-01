@@ -1,15 +1,22 @@
 # HTB CLI
 
-A clean, modular command-line interface for the Hack The Box Labs API.
+Clean, modular command-line interface for the Hack The Box API.
 
 ## Features
 
-- **Machines**: List, spawn (by name!), stop, reset, submit flags, todo list, writeups
-- **Challenges**: Browse, start docker containers, download files, submit flags
-- **Sherlocks**: DFIR investigation challenges with multi-task support
-- **VPN**: Manage VPN connections and download configs
-- **Seasons**: Arena/competitive season support
-- **Search**: Global search across machines, challenges, and users
+- **Machines** — List, spawn by name/ID, stop, reset, submit flags, todo list, writeups
+- **Challenges** — Browse, start docker containers, download files, submit flags
+- **Sherlocks** — DFIR investigations with multi-task support
+- **VPN** — Manage connections, download configs, filter by product/prolab
+- **Seasons/Arena** — Competitive season machine tracking and flag submission
+- **Dashboard** — Favorites, in-progress, recommended items
+- **Profile** — View user profiles, badges, activity, content stats
+- **Pwnbox** — Start, stop, status, usage statistics
+- **Fortresses** — List, info, flags, own, reset
+- **Tracks** — List, info, enroll, like
+- **Rankings** — Users, teams, countries, universities leaderboards
+- **Teams** — Info, members, activity
+- **Experience API** — Level, XP, streak shown in `whoami` and `status`
 
 ## Installation
 
@@ -17,22 +24,15 @@ A clean, modular command-line interface for the Hack The Box Labs API.
 pipx install htb-terminal
 ```
 
-To enable OS keyring storage:
+For OS keyring support:
 
 ```bash
 pipx install "htb-terminal[auth]"
 ```
 
-If a keyring backend isn’t available on your system, the CLI automatically falls back to the
-config file token at `~/.config/htb-cli/token`.
+Falls back to `~/.config/htb-cli/token` (mode `0600`) if no keyring is available.
 
-Check if keyring is installed:
-
-```bash
-python -c "import keyring; print(keyring.__version__)"
-```
-
-If you already installed `htb-terminal` without extras:
+If already installed without extras:
 
 ```bash
 pipx inject htb-terminal keyring
@@ -40,119 +40,205 @@ pipx inject htb-terminal keyring
 
 ## Setup
 
-Get your API token from [HTB App Token Settings](https://app.hackthebox.com/account-settings).
+Get your API token from [HTB App Settings](https://app.hackthebox.com/account-settings).
 
 ```bash
-# Recommended: store token securely (keyring if available)
+# Store securely (keyring preferred, file fallback)
 htb auth set
 
-# Option 2: Environment variable (overrides stored token)
-export HTB_TOKEN='your-token-here'  # add to ~/.bashrc to persist
+# Or via env var (overrides stored token)
+export HTB_TOKEN='your-token-here'
 ```
-
-If keyring is unavailable, the token is stored in `~/.config/htb-cli/token` with mode `0600`.
 
 ## Usage
 
+### Overview
+
 ```bash
-# Quick status
-htb status
-htb whoami
-htb search "linux"
+htb status        # User, connection, active machine
+htb whoami        # Your profile with level, XP, streak
+htb search linux  # Global search
+```
 
-# Auth
-htb auth set
-htb auth show
-htb auth status
-htb auth unset
+### Auth
 
-# Machines (supports name or ID!)
-htb machine list
-htb machine list --retired
-htb machine list --difficulty easy
-htb machine list --sort name
-htb machine list --search "gavel"
-htb machine info Gavel
-htb machine info 811
-htb machine spawn Gavel              # By name
-htb machine spawn 811                # By ID
-htb machine active
-htb machine achievement Gavel        # Shareable achievement URL
-htb machine achievement              # Uses active machine
-htb machine stop
-htb machine reset
-htb machine own 'flag'
-htb machine unreleased
-htb machine todo                     # Your todo list
-htb machine add-todo Gavel           # Toggle todo (add/remove)
-htb machine writeup Gavel            # Official writeup (VIP)
+```bash
+htb auth set      # Store token
+htb auth show     # Show token source (never reveals token)
+htb auth status   # Validate token + show user info
+htb auth unset    # Remove stored token
+```
 
-# Challenges
-htb challenge list
-htb challenge list --category web
-htb challenge list --difficulty easy
-htb challenge list --category forensics --difficulty easy --unsolved
-htb challenge list --retired
-htb challenge categories
-htb challenge info "Reminiscent"
-htb challenge active                 # Show running docker instance
-htb challenge start "Reminiscent"
-htb challenge stop "Reminiscent"
-htb challenge download "Reminiscent"
+### Machines
+
+```bash
+htb machine list                         # Active machines
+htb machine list --retired               # Retired machines
+htb machine list --difficulty easy       # Filter by difficulty
+htb machine list --sort name             # Sort by name
+htb machine list --search "gavel"        # Search by name
+htb machine info Gavel                   # Detailed info
+htb machine spawn Gavel                  # Spawn by name
+htb machine spawn 811                    # Spawn by ID
+htb machine active                       # Current spawned machine
+htb machine stop                         # Terminate
+htb machine reset                        # Reset
+htb machine own 'HTB{flag}'             # Submit flag
+htb machine todo                         # Your todo list
+htb machine add-todo Gavel               # Toggle todo
+htb machine writeup Gavel                # Official writeup (VIP)
+htb machine achievement Gavel            # Shareable URL
+htb machine unreleased                   # Upcoming machines
+```
+
+### Challenges
+
+```bash
+htb challenge list                       # Active challenges
+htb challenge list --category web        # Filter by category
+htb challenge list --difficulty easy     # Filter by difficulty
+htb challenge list --unsolved            # Unsolved only
+htb challenge list --retired             # Retired challenges
+htb challenge categories                 # List categories
+htb challenge info "Reminiscent"         # Detailed info
+htb challenge start "Reminiscent"        # Spawn docker
+htb challenge stop "Reminiscent"         # Stop docker
+htb challenge active                     # Running docker
+htb challenge download "Reminiscent"     # Download files
 htb challenge download "Reminiscent" -o ./downloads/
 htb challenge own 'HTB{flag}' --challenge "Reminiscent"
+htb challenge writeup "Reminiscent"      # Community writeups
+htb challenge activity "Reminiscent"     # Recent solves
+```
 
-# Sherlocks
-htb sherlock list
-htb sherlock info "Meerkat"
-htb sherlock tasks "Meerkat"         # List questions
-htb sherlock download "Meerkat"
-htb sherlock download "Meerkat" -o ./downloads/
+### Sherlocks
+
+```bash
+htb sherlock list                        # List investigations
+htb sherlock categories                  # List categories
+htb sherlock info "Meerkat"              # Detailed info
+htb sherlock tasks "Meerkat"             # List questions
+htb sherlock download "Meerkat"          # Download files
 htb sherlock own "Meerkat" "answer" --task 1
+htb sherlock progress "Meerkat"          # Your progress
+htb sherlock writeup "Meerkat"           # Community writeups
+htb sherlock official-writeup "Meerkat"  # Official writeup URL
+```
 
-# VPN
-htb vpn status
-htb vpn status labs
-htb vpn status competitive
-htb vpn connections
-htb vpn servers                      # Defaults to labs
-htb vpn servers --product competitive
-htb vpn servers --product starting_point
-htb vpn switch 123
-htb vpn download 123                 # TCP by default
-htb vpn download 123 --udp           # UDP variant
+### VPN
+
+```bash
+htb vpn status                           # Current connection
+htb vpn status labs                      # Labs connection status
+htb vpn status competitive               # Competitive status
+htb vpn connections                      # All active connections
+htb vpn servers                          # Labs VPN servers
+htb vpn servers --product competitive    # Competitive servers
+htb vpn servers --prolab-id 3            # Prolab servers
+htb vpn switch 123                       # Switch server
+htb vpn download 123                     # TCP config
+htb vpn download 123 --udp               # UDP config
 htb vpn download 123 -o ./downloads/
+```
 
-# Seasons/Arena
-htb season list
-htb season machines
-htb season active
-htb season rank                      # Current season
-htb season rank 9                    # Specific season
-htb season leaderboard --limit 20
-htb season leaderboard 9 --limit 10
-htb season own 'flag'
+### Seasons / Arena
+
+```bash
+htb season list                          # All seasons
+htb season machines                      # Season machines
+htb season active-machines               # Currently playable
+htb season rank                          # Your current rank
+htb season rank 9                        # Specific season
+htb season leaderboard --limit 20        # Top players
+htb season leaderboard 9 --limit 10      # Specific season
+htb season own 'flag'                    # Submit arena flag
+```
+
+### Dashboard
+
+```bash
+htb dashboard favorites                  # Owned/favorited items
+htb dashboard inprogress                 # In-progress items
+htb dashboard recommended                # Recommended for you
+```
+
+### Profile
+
+```bash
+htb profile basic                        # Your profile
+htb profile basic 123456                 # Specific user
+htb profile badges                       # Your badges
+htb profile badges 123456                # User's badges
+htb profile activity                     # Recent solves
+htb profile activity 123456
+htb profile content                      # Solves by type
+htb profile content 123456
+```
+
+### Pwnbox
+
+```bash
+htb pwnbox status                        # Current state
+htb pwnbox start                         # Start instance
+htb pwnbox stop                          # Stop instance
+htb pwnbox usage                         # Usage statistics
+```
+
+### Fortresses
+
+```bash
+htb fortress list                        # All fortresses
+htb fortress info "Jet"                  # Detailed info
+htb fortress flags "Jet"                 # Flag list
+htb fortress own 'flag'                  # Submit flag
+htb fortress reset "Jet"                 # Vote to reset
+```
+
+### Tracks
+
+```bash
+htb track list                           # Available tracks
+htb track info "TrackName"               # Detailed info
+htb track enroll "TrackName"             # Enroll
+htb track like "TrackName"               # Like
+```
+
+### Rankings
+
+```bash
+htb ranking users                        # Top users
+htb ranking users --limit 50
+htb ranking teams                        # Top teams
+htb ranking countries                    # Top countries
+htb ranking universities                 # Top universities
+htb ranking country-members "US"         # Country members
+```
+
+### Teams
+
+```bash
+htb team info                            # Your team
+htb team info 7168                       # Specific team
+htb team members                         # Your team members
+htb team members 7168                    # Team's members
+htb team activity                        # Recent team activity
+htb team activity 7168
 ```
 
 ## JSON Output
 
-All commands support `--raw` / `-r` flag for JSON output:
+Every command supports `--raw` / `-r` for JSON output:
 
 ```bash
-# Get machine IP
 htb machine active -r | jq '.info.ip'
-
-# List machine names
 htb machine list -r | jq '.data[].name'
-
-# Script example
 IP=$(htb machine active -r | jq -r '.info.ip')
 nmap -sV $IP
 ```
 
 ## API Reference
 
-Full API docs: https://gubarz.github.io/unofficial-htb-api/ 
+Unofficial HTB API docs: https://gubarz.github.io/unofficial-htb-api/
 
 ## License
 
