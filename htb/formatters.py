@@ -317,6 +317,70 @@ def print_fortress(fortress: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Track formatters
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def print_tracks(tracks: list[dict], title: str = "Tracks") -> None:
+    """Print track list in a table."""
+    if not tracks:
+        print_warning("No tracks found")
+        return
+
+    table = create_table(["ID", "Name", "Difficulty", "Likes", "Official"], title)
+
+    for t in tracks:
+        table.add_row(
+            str(t.get("id", "?")),
+            sanitize_text(t.get("name", "?")),
+            sanitize_text(t.get("difficulty", "?")),
+            str(t.get("likes", "?")),
+            "[green]✓[/green]" if t.get("official") else "[dim]○[/dim]",
+        )
+
+    console.print(table)
+
+
+def print_track(track: dict) -> None:
+    """Print single track details."""
+    info = {
+        "ID": track.get("id"),
+        "Name": track.get("name"),
+        "Difficulty": track.get("difficulty"),
+        "Creator": track.get("creator", {}).get("name") if isinstance(track.get("creator"), dict) else None,
+        "Likes": track.get("likes"),
+        "Official": "[green]Yes[/green]" if track.get("official") else "No",
+        "Staff Pick": "[green]Yes[/green]" if track.get("staff_pick") else "No",
+        "Description": track.get("description"),
+    }
+
+    info = {k: v for k, v in info.items() if v is not None}
+    print_key_value(info, f"Track: {sanitize_text(track.get('name', 'Unknown'))}")
+
+    # Show items/modules in the track
+    items = track.get("items", [])
+    if items:
+        from rich.table import Table
+        table = Table(title="Modules", box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#")
+        table.add_column("Type")
+        table.add_column("Name")
+        table.add_column("Difficulty")
+        table.add_column("Completed")
+        for i, item in enumerate(items, 1):
+            completed = "[green]✓[/green]" if item.get("complete") else "[dim]○[/dim]"
+            table.add_row(
+                str(i),
+                sanitize_text(item.get("type", "?")),
+                sanitize_text(item.get("name", "?")),
+                sanitize_text(item.get("difficulty", "?")),
+                completed,
+            )
+        console.print()
+        console.print(table)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VPN/Connection formatters
 # ─────────────────────────────────────────────────────────────────────────────
 
