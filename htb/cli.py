@@ -137,7 +137,7 @@ def status(
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Quick overview: user, connection, and active machine."""
-    from .client import api_get, api_get_v5
+    from .client import api_get, api_get_experience, api_get_v5
 
     try:
         user_data = api_get("/user/info")
@@ -151,7 +151,9 @@ def status(
         # ── User panel ──
         info = user_data.get("info", {})
         uid = info.get("id")
+        account_id = info.get("account_id")
         profile = {}
+        experience = {}
         if uid:
             try:
                 prof_data = api_get(f"/user/profile/basic/{uid}")
@@ -159,12 +161,33 @@ def status(
             except Exception:
                 profile = {}
 
+        if account_id:
+            try:
+                experience = api_get_experience(f"/account/{account_id}")
+            except Exception:
+                experience = {}
+
         points = profile.get("userStats", {}).get("points") or profile.get("points")
+        level = experience.get("level")
+        level_title = experience.get("levelTitle")
+        xp = experience.get("totalExperiencePoints")
+        streak = experience.get("streakData", {}).get("counter")
+        lvl_str = None
+        if level is not None:
+            lvl_str = f"{level}"
+            if level_title:
+                lvl_str += f" {level_title}"
+        xp_str = f"{xp:,}" if xp else None
+        streak_str = f"{streak}d" if streak else None
+
         user_parts = {
             "Name": profile.get("name", info.get("name")),
             "Rank": profile.get("rank", info.get("rank")),
             "Points": points,
             "Ranking": f"#{profile.get('ranking', info.get('ranking'))}",
+            "Level": lvl_str,
+            "XP": xp_str,
+            "Streak": streak_str,
             "Rank Progress": f"{profile.get('current_rank_progress', 0):.1f}%" if profile.get("current_rank_progress") is not None else None,
             "Next Rank": profile.get("next_rank"),
             "Respects": profile.get("respects", info.get("respects")),
