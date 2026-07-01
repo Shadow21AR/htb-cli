@@ -141,7 +141,7 @@ def own(
     """Submit a flag for arena points (uses active machine)."""
     try:
         # Get active machine ID first
-        active_data = api_get("/machine/active")
+        active_data = api_get("/v5/virtual_machine/active")
         info = active_data.get("info")
 
         if not info:

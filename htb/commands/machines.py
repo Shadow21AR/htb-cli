@@ -79,18 +79,7 @@ class SortType(str, Enum):
 
 
 def _find_machine_by_name(name: str) -> dict | None:
-    """Find a machine by name (case-insensitive)."""
-    try:
-        # Try profile endpoint first (works with machine names/slugs)
-        data = api_get(f"/machine/profile/{name}")
-        return data.get("info", data)
-    except HTBError as e:
-        # Do not mask auth/token errors as "not found".
-        if _is_auth_error(e):
-            raise
-        pass
-
-    # Fallback to searching v5 machine list
+    """Find a machine by name (case-insensitive) via v5 search."""
     try:
         data = api_get("/v5/machines", {"per_page": 100, "keyword": name})
         machines = data.get("data", [])
@@ -220,7 +209,7 @@ def achievement(
             machine_id = _resolve_machine_id(name)
             target_name = name
         else:
-            active_data = api_get("/machine/active")
+            active_data = api_get("/v5/virtual_machine/active")
             info = active_data.get("info") if isinstance(active_data, dict) else None
             if not info:
                 raise HTBError("No active machine")
@@ -324,7 +313,7 @@ def stop(
 ):
     """Terminate the active machine."""
     try:
-        active_data = api_get("/machine/active")
+        active_data = api_get("/v5/virtual_machine/active")
         info = active_data.get("info")
 
         if not info:
@@ -351,7 +340,7 @@ def reset(
 ):
     """Reset the active machine."""
     try:
-        active_data = api_get("/machine/active")
+        active_data = api_get("/v5/virtual_machine/active")
         info = active_data.get("info")
 
         if not info:
@@ -380,7 +369,7 @@ def own(
 ):
     """Submit a flag for the active machine."""
     try:
-        active_data = api_get("/machine/active")
+        active_data = api_get("/v5/virtual_machine/active")
         info = active_data.get("info")
 
         if not info:
