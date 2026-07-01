@@ -31,6 +31,10 @@ Usage:
     htb sherlock tasks NAME       Show tasks/questions
     htb sherlock download NAME    Download files
     htb sherlock own NAME FLAG    Submit answer
+    htb sherlock categories       List categories
+    htb sherlock progress NAME    Show progress
+    htb sherlock writeup NAME     Get community writeup
+    htb sherlock official-writeup NAME  Get official writeup URL
 
     htb vpn status                Show VPN status
     htb vpn servers               List VPN servers

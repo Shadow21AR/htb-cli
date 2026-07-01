@@ -229,9 +229,114 @@ def tasks(
         for i, task in enumerate(tasks_list, 1):
             solved = task.get("completed")
             status = "[green]✓[/green]" if solved else "[dim]○[/dim]"
-            question = sanitize_text(task.get("description", task.get("title", f"Task {i}")))
             console.print(f"  {status} [bold]{i}.[/bold] {question}")
 
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("categories")
+def categories(
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """List sherlock categories."""
+    try:
+        data = api_get("/sherlocks/categories/list")
+        if raw:
+            print_json(data)
+            return
+
+        cats = data.get("info", [])
+        if not cats:
+            print_warning("No categories found")
+            return
+
+        from ..formatters import create_table
+        table = create_table(["ID", "Name"], "Sherlock Categories")
+        for c in cats:
+            table.add_row(str(c.get("id", "?")), sanitize_text(c.get("name", "?")))
+        console.print(table)
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("progress")
+def progress(
+    name: str = typer.Argument(..., help="Sherlock name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Show progress for a sherlock."""
+    try:
+        sherlock_id = _resolve_sherlock_id(name)
+        data = api_get(f"/sherlocks/{sherlock_id}/progress")
+        if raw:
+            print_json(data)
+            return
+
+        prog = data.get("data", data)
+        info = {
+            "Sherlock ID": prog.get("id") or sherlock_id,
+            "Name": prog.get("name"),
+            "Completed Tasks": f"{prog.get('completed_tasks', 0)}/{prog.get('total_tasks', '?')}",
+            "Completed": "[green]Yes[/green]" if prog.get("completed") else "[yellow]No[/yellow]",
+            "Points Earned": prog.get("points_earned", 0),
+        }
+        info = {k: v for k, v in info.items() if v is not None}
+        from ..formatters import print_key_value as _print_kv
+        _print_kv(info, f"Sherlock Progress: {sanitize_text(prog.get('name', name))}")
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("writeup")
+def writeup(
+    name: str = typer.Argument(..., help="Sherlock name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Get community writeup info for a sherlock."""
+    try:
+        sherlock_id = _resolve_sherlock_id(name)
+        data = api_get(f"/sherlocks/{sherlock_id}/writeup")
+        if raw:
+            print_json(data)
+            return
+
+        wu = data.get("data", {})
+        official = wu.get("official", {})
+        info = {
+            "PDF URL": official.get("url") or f"https://labs.hackthebox.com/api/v4/sherlocks/{sherlock_id}/writeup/official",
+            "Video URL": official.get("video_url"),
+        }
+        info = {k: v for k, v in info.items() if v is not None}
+        from ..formatters import print_key_value as _print_kv
+        _print_kv(info, f"Sherlock Writeup: {name}")
+    except HTBError as e:
+        print_error(e.message)
+        raise typer.Exit(1)
+
+
+@app.command("official-writeup")
+def official_writeup(
+    name: str = typer.Argument(..., help="Sherlock name or ID"),
+    raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
+):
+    """Get official writeup download URL for a sherlock."""
+    try:
+        sherlock_id = _resolve_sherlock_id(name)
+        data = api_get(f"/sherlocks/{sherlock_id}/writeup/official")
+        if raw:
+            print_json(data)
+            return
+
+        url = data.get("url", "")
+        if url:
+            from ..formatters import console as _console
+            _console.print(f"[cyan]Official Writeup URL:[/cyan] {sanitize_text(url)}")
+        else:
+            print_warning("No official writeup available for this sherlock")
     except HTBError as e:
         print_error(e.message)
         raise typer.Exit(1)
