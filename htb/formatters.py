@@ -164,15 +164,31 @@ def print_machine(machine: dict) -> None:
     """Print single machine details."""
     data = _unwrap_machine_obj(machine)
 
+    maker = data.get("maker", {}) or {}
+    maker_name = maker.get("name") if isinstance(maker, dict) else None
+
+    user_blood = data.get("userBlood") or {}
+    root_blood = data.get("rootBlood") or {}
+    user_blood_name = user_blood.get("user", {}).get("name") if isinstance(user_blood, dict) else None
+    root_blood_name = root_blood.get("user", {}).get("name") if isinstance(root_blood, dict) else None
+
     info = {
         "ID": _pick(data, "id", "machine_id", "machineId", "box_id"),
         "Name": _pick(data, "name", "machine_name", "machineName", "value"),
         "OS": _pick(data, "os", "os_name", "osName"),
         "Difficulty": _pick(data, "difficultyText", "difficulty_text", "difficulty", "difficultyTextShort"),
         "IP": _pick(data, "ip", "ip4", "ip_address") or "Not spawned",
+        "Points": _pick(data, "static_points", "points", "score"),
         "Rating": _pick(data, "star", "stars", "rating", "avg_rating", "avgRating"),
-        "Points": _pick(data, "points", "score"),
-        "Description": _pick(data, "info_status", "synopsis"),
+        "User Owns": _pick(data, "user_owns_count", "userOwnsCount", "user_owns"),
+        "Root Owns": _pick(data, "root_owns_count", "rootOwnsCount", "root_owns"),
+        "Reviews": data.get("reviews_count"),
+        "Free": "Yes" if data.get("free") else "No",
+        "Release": str(data.get("release", ""))[:10] if data.get("release") else None,
+        "Creator": maker_name,
+        "First User Blood": f"{user_blood_name} ({user_blood.get('blood_difference', '')})" if user_blood_name else None,
+        "First Root Blood": f"{root_blood_name} ({root_blood.get('blood_difference', '')})" if root_blood_name else None,
+        "Description": _pick(data, "synopsis", "info_status"),
         "Lab Server": _pick(data, "lab_server", "labServer") or _pick(machine, "lab_server", "labServer"),
         "VPN Server ID": _pick(data, "vpn_server_id", "vpnServerId") or _pick(machine, "vpn_server_id", "vpnServerId"),
     }
@@ -212,6 +228,9 @@ def print_challenge(challenge: dict) -> None:
     """Print single challenge details."""
     data = challenge.get("data", challenge)
 
+    solved = data.get("authUserSolve")
+    solved_str = "Yes" if solved else "No"
+
     info = {
         "ID": data.get("id"),
         "Name": data.get("name"),
@@ -220,7 +239,16 @@ def print_challenge(challenge: dict) -> None:
         "Points": data.get("points"),
         "Solves": data.get("solves"),
         "Rating": data.get("star", data.get("stars")),
-        "Released": str(data.get("release_date") or data.get("released") or "")[:10] or None,
+        "Experience Points": data.get("experience_points"),
+        "Likes": data.get("likes"),
+        "Dislikes": data.get("dislikes"),
+        "Reviews": data.get("reviews_count"),
+        "State": data.get("state", "active" if not data.get("retired") else "retired"),
+        "Released": str(data.get("release_date") or "")[:10] or None,
+        "Creator": data.get("creator_name"),
+        "First Blood": f"{data.get('first_blood_user', '')} ({data.get('first_blood_time', '')})" if data.get("first_blood_user") else None,
+        "Solved": solved_str if solved is not None else None,
+        "File": f"{data.get('file_name', '')} ({data.get('file_size', '')})" if data.get("file_name") else None,
         "Description": data.get("description"),
     }
 

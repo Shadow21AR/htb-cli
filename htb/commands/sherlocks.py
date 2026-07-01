@@ -280,7 +280,7 @@ def progress(
             "Sherlock ID": prog.get("id") or sherlock_id,
             "Name": prog.get("name"),
             "Completed Tasks": f"{prog.get('completed_tasks', 0)}/{prog.get('total_tasks', '?')}",
-            "Completed": "[green]Yes[/green]" if prog.get("completed") else "[yellow]No[/yellow]",
+            "Completed": "Yes" if prog.get("completed") else "No",
             "Points Earned": prog.get("points_earned", 0),
         }
         info = {k: v for k, v in info.items() if v is not None}
