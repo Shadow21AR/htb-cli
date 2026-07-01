@@ -80,6 +80,10 @@ Usage:
     htb ranking universities      Top universities
     htb ranking country-members CODE  Country members
 
+    htb team info ID               Get team profile
+    htb team members ID            List team members
+    htb team activity ID           Show recent team activity
+
 All commands support --raw/-r for JSON output.
 """
 
@@ -88,7 +92,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import auth, challenges, dashboard, fortresses, machines, profile, pwnbox, rankings, season, sherlocks, test as test_cmd, tracks, vpn
+from .commands import auth, challenges, dashboard, fortresses, machines, profile, pwnbox, rankings, season, sherlocks, teams, test as test_cmd, tracks, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 from rich import box
 from rich.console import Console
@@ -115,6 +119,7 @@ app.add_typer(pwnbox.app, name="pwnbox")
 app.add_typer(fortresses.app, name="fortress")
 app.add_typer(tracks.app, name="track")
 app.add_typer(rankings.app, name="ranking")
+app.add_typer(teams.app, name="team")
 app.add_typer(auth.app, name="auth")
 app.add_typer(test_cmd.app, name="test")
 

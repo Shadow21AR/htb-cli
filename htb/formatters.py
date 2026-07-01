@@ -476,6 +476,71 @@ def print_country_members(entries: list[dict], country_code: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Team formatters
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def print_team(team: dict) -> None:
+    """Print team profile."""
+    info = {
+        "ID": team.get("id"),
+        "Name": team.get("name"),
+        "Points": team.get("points"),
+        "Country": team.get("country_name"),
+        "Motto": team.get("motto"),
+        "Captain": team.get("captain", {}).get("name") if isinstance(team.get("captain"), dict) else None,
+        "Public": "[green]Yes[/green]" if team.get("public") else "No",
+        "Description": team.get("description"),
+    }
+    info = {k: v for k, v in info.items() if v is not None}
+    print_key_value(info, f"Team: {sanitize_text(team.get('name', 'Unknown'))}")
+
+
+def print_team_members(members: list[dict], team_id: int) -> None:
+    """Print team members."""
+    if not members:
+        print_warning("No members found")
+        return
+
+    table = create_table(["Name", "Rank", "Points", "Role", "Country", "Root", "User"], f"Team {team_id} Members")
+
+    for m in members:
+        table.add_row(
+            sanitize_text(m.get("name", "?")),
+            str(m.get("rank", m.get("rank_text", "?"))),
+            str(m.get("points", "?")),
+            sanitize_text(m.get("role", "?")),
+            sanitize_text(m.get("country_code", m.get("country_name", "")) or ""),
+            str(m.get("root_owns", "?")),
+            str(m.get("user_owns", "?")),
+        )
+
+    console.print(table)
+
+
+def print_team_activity(activity: list[dict], team_id: int) -> None:
+    """Print team activity."""
+    if not activity:
+        print_warning("No recent activity")
+        return
+
+    table = create_table(["Date", "User", "Type", "Object", "Name", "Points"], f"Team {team_id} Activity")
+
+    for a in activity:
+        user_name = a.get("user", {}).get("name", "?") if isinstance(a.get("user"), dict) else "?"
+        table.add_row(
+            str(a.get("date_diff", a.get("date", "?"))),
+            sanitize_text(user_name),
+            sanitize_text(a.get("type", "?")),
+            sanitize_text(a.get("object_type", "?")),
+            sanitize_text(a.get("name", "?")),
+            str(a.get("points", "?")),
+        )
+
+    console.print(table)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VPN/Connection formatters
 # ─────────────────────────────────────────────────────────────────────────────
 
