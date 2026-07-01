@@ -71,6 +71,7 @@ def test_missing_token_raises_htb_error(tmp_path, monkeypatch):
         token_path.unlink()
 
     htb_client._client = None
+    cfg._config = None
 
     try:
         htb_client.get_client()
