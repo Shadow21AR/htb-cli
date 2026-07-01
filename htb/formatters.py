@@ -381,6 +381,101 @@ def print_track(track: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Ranking formatters
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def print_ranking_entries(entries: list[dict], title: str = "Rankings") -> None:
+    """Print ranking entries (users or teams) in a table."""
+    if not entries:
+        print_warning("No entries found")
+        return
+
+    table = create_table(["Rank", "Name", "Country", "Points", "Root", "User", "Challenges", "Fortress"], title)
+
+    for e in entries:
+        table.add_row(
+            str(e.get("rank", "?")),
+            sanitize_text(e.get("name", "?")),
+            sanitize_text(e.get("country", e.get("country_code", "")) or ""),
+            str(e.get("points", "?")),
+            str(e.get("root_owns", "?")),
+            str(e.get("user_owns", "?")),
+            str(e.get("challenge_owns", "?")),
+            str(e.get("fortress", "?")),
+        )
+
+    console.print(table)
+
+
+def print_countries(entries: list[dict], title: str = "Country Rankings") -> None:
+    """Print country rankings."""
+    if not entries:
+        print_warning("No entries found")
+        return
+
+    table = create_table(["Rank", "Country", "Code", "Members", "Points", "Root", "User", "Challenges"], title)
+
+    for e in entries:
+        table.add_row(
+            str(e.get("rank", "?")),
+            sanitize_text(e.get("name", "?")),
+            sanitize_text(e.get("country", "?")),
+            str(e.get("members", "?")),
+            str(e.get("points", "?")),
+            str(e.get("root_owns", "?")),
+            str(e.get("user_owns", "?")),
+            str(e.get("challenge_owns", "?")),
+        )
+
+    console.print(table)
+
+
+def print_universities(entries: list[dict], title: str = "University Rankings") -> None:
+    """Print university rankings."""
+    if not entries:
+        print_warning("No entries found")
+        return
+
+    table = create_table(["Rank", "Name", "Country", "Students", "Points", "Root", "User", "Challenges"], title)
+
+    for e in entries:
+        table.add_row(
+            str(e.get("rank", "?")),
+            sanitize_text(e.get("name", "?")),
+            sanitize_text(e.get("country", "") or ""),
+            str(e.get("students", "?")),
+            str(e.get("points", "?")),
+            str(e.get("root_owns", "?")),
+            str(e.get("user_owns", "?")),
+            str(e.get("challenge_owns", "?")),
+        )
+
+    console.print(table)
+
+
+def print_country_members(entries: list[dict], country_code: str) -> None:
+    """Print country member rankings."""
+    if not entries:
+        print_warning("No members found")
+        return
+
+    table = create_table(["Rank", "Name", "Points", "Root", "User", "Challenges"], f"Country Members: {country_code.upper()}")
+
+    for e in entries:
+        table.add_row(
+            str(e.get("rank", "?")),
+            sanitize_text(e.get("name", "?")),
+            str(e.get("points", "?")),
+            str(e.get("root_owns", "?")),
+            str(e.get("user_owns", "?")),
+            str(e.get("challenge_owns", "?")),
+        )
+
+    console.print(table)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VPN/Connection formatters
 # ─────────────────────────────────────────────────────────────────────────────
 
