@@ -10,7 +10,7 @@ from ..formatters import console, print_error, print_json, sanitize_text
 
 import typer
 
-app = typer.Typer(help="Run API endpoint diagnostics (helpful for debugging)")
+app = typer.Typer(help="Run API endpoint diagnostics (helpful for debugging)", hidden=True)
 
 PASS = "PASS"
 BROKEN = "BROKEN"
@@ -45,11 +45,24 @@ def _test(method: str, path: str, tag: str, params: dict | None = None, post_dat
 
 @app.command("all")
 def test_all(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
-    """Run full API endpoint scan using live IDs."""
+    """Run full API endpoint scan using live IDs.
+
+    ⚠️  This makes real API calls including spawn/terminate/reset.
+    """
     global RESULTS
     RESULTS = []
+
+    if not yes:
+        from ..formatters import print_warning
+        print_warning("This will make real API calls (spawn, terminate, etc.)")
+        try:
+            typer.confirm("Continue?", abort=True)
+        except typer.Abort:
+            console.print("[dim]Aborted.[/dim]")
+            raise typer.Exit(0)
 
     # Bootstrap: fetch valid IDs from working list endpoints
     client = HTBClient()
