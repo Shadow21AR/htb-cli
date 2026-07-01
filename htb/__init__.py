@@ -1,5 +1,5 @@
 """
-HTB CLI - Command Line Interface for Hack The Box Labs.
+HTB CLI - Command Line Interface for Hack The Box.
 
 A clean, modular Python CLI for the HTB API.
 """

@@ -1,5 +1,5 @@
 """
-HTB CLI - Command Line Interface for Hack The Box Labs.
+HTB CLI - Command Line Interface for Hack The Box.
 
 Usage:
     htb status                    Overview: user, connection, active machine
@@ -49,8 +49,6 @@ Usage:
     htb season rank [ID]          Show season ranking
     htb season leaderboard [ID]   Show season leaderboard
 
-    htb season leaderboard [ID]   Show season leaderboard
-
     htb dashboard favorites       Show favorite/owned items
     htb dashboard inprogress      Show in-progress items
     htb dashboard recommended     Show recommended items
@@ -58,8 +56,6 @@ Usage:
     htb profile basic ID          View user's profile
     htb profile badges ID         View user's badges
     htb profile activity ID       View user's recent activity
-    htb profile content ID        View user's solves/owns
-
     htb profile content ID        View user's solves/owns
 
     htb pwnbox status             Show Pwnbox status
@@ -107,7 +103,7 @@ console = Console()
 # Create main app
 app = typer.Typer(
     name="htb",
-    help="CLI for Hack The Box Labs API",
+    help="CLI for Hack The Box",
     no_args_is_help=True,
 )
 
@@ -146,11 +142,25 @@ def status(
 
         # ── User panel ──
         info = user_data.get("info", {})
+        uid = info.get("id")
+        profile = {}
+        if uid:
+            try:
+                prof_data = api_get(f"/user/profile/basic/{uid}")
+                profile = prof_data.get("profile", {})
+            except Exception:
+                profile = {}
+
         user_parts = {
-            "Name": info.get("name"),
-            "Rank": info.get("rank"),
+            "Name": profile.get("name", info.get("name")),
+            "Rank": profile.get("rank", info.get("rank")),
             "Points": info.get("points"),
-            "Respects": info.get("respects"),
+            "Ranking": f"#{profile.get('ranking', info.get('ranking'))}",
+            "Rank Progress": f"{profile.get('current_rank_progress', 0):.1f}%" if profile.get("current_rank_progress") is not None else None,
+            "Next Rank": profile.get("next_rank"),
+            "Respects": profile.get("respects", info.get("respects")),
+            "Country": profile.get("country_name"),
+            "Team": profile.get("team", {}).get("name") if profile.get("team") else None,
         }
         user_parts = {k: v for k, v in user_parts.items() if v is not None}
         console.print(Panel(
@@ -212,23 +222,41 @@ def whoami(
 
     try:
         data = api_get("/user/info")
+        info = data.get("info", {})
+
+        # Fetch richer profile data
+        uid = info.get("id")
+        profile = {}
+        if uid:
+            try:
+                prof_data = api_get(f"/user/profile/basic/{uid}")
+                profile = prof_data.get("profile", {})
+            except Exception:
+                profile = {}
 
         if raw:
-            print_json(data)
+            print_json({"user": data, "profile": profile})
             return
 
-        info = data.get("info", {})
         user_info = {
             "ID": info.get("id"),
             "Username": info.get("name"),
-            "Rank": info.get("rank"),
+            "Rank": profile.get("rank", info.get("rank")),
+            "Ranking": f"#{profile.get('ranking', info.get('ranking'))}",
+            "Rank Progress": f"{profile.get('current_rank_progress', 0):.1f}%" if profile.get("current_rank_progress") is not None else None,
+            "Next Rank": profile.get("next_rank"),
             "Points": info.get("points"),
-            "Ranking": info.get("ranking"),
-            "Team": info.get("team", {}).get("name") if info.get("team") else None,
+            "Respects": profile.get("respects", info.get("respects")),
+            "Country": profile.get("country_name"),
+            "Team": profile.get("team", {}).get("name") if profile.get("team") else None,
+            "Joined": str(profile.get("joined_date", ""))[:10] if profile.get("joined_date") else None,
+            "VIP": "Yes" if profile.get("isVip") else "No",
+            "GitHub": profile.get("github"),
+            "Twitter": profile.get("twitter"),
         }
 
         user_info = {k: v for k, v in user_info.items() if v is not None}
-        print_key_value(user_info, f"User: {info.get('name', 'Unknown')}")
+        print_key_value(user_info, f"User: {profile.get('name', info.get('name', 'Unknown'))}")
 
     except HTBError as e:
         print_error(e.message)
@@ -285,7 +313,7 @@ def main(
     ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version", callback=version_callback, is_eager=True),
 ):
-    """HTB CLI - Hack The Box Labs from your terminal."""
+    """HTB CLI - Hack The Box from your terminal."""
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
         raise typer.Exit()

@@ -79,16 +79,31 @@ def status():
     try:
         data = api_get("/user/info")
         info = data.get("info", {})
+
+        uid = info.get("id")
+        profile = {}
+        if uid:
+            try:
+                prof_data = api_get(f"/user/profile/basic/{uid}")
+                profile = prof_data.get("profile", {})
+            except Exception:
+                profile = {}
+
         user_info = {
             "ID": info.get("id"),
             "Username": info.get("name"),
-            "Rank": info.get("rank"),
+            "Rank": profile.get("rank", info.get("rank")),
+            "Ranking": f"#{profile.get('ranking', info.get('ranking'))}",
+            "Rank Progress": f"{profile.get('current_rank_progress', 0):.1f}%" if profile.get("current_rank_progress") is not None else None,
+            "Next Rank": profile.get("next_rank"),
             "Points": info.get("points"),
-            "Ranking": info.get("ranking"),
-            "Team": info.get("team", {}).get("name") if info.get("team") else None,
+            "Respects": profile.get("respects", info.get("respects")),
+            "Country": profile.get("country_name"),
+            "Team": profile.get("team", {}).get("name") if profile.get("team") else None,
+            "Joined": str(profile.get("joined_date", ""))[:10] if profile.get("joined_date") else None,
         }
         user_info = {k: v for k, v in user_info.items() if v is not None}
-        print_key_value(user_info, f"User: {info.get('name', 'Unknown')}")
+        print_key_value(user_info, f"User: {profile.get('name', info.get('name', 'Unknown'))}")
     except HTBError as e:
         print_error(e.message)
         raise typer.Exit(1)
