@@ -96,7 +96,7 @@ def status():
             "Ranking": f"#{profile.get('ranking', info.get('ranking'))}",
             "Rank Progress": f"{profile.get('current_rank_progress', 0):.1f}%" if profile.get("current_rank_progress") is not None else None,
             "Next Rank": profile.get("next_rank"),
-            "Points": info.get("points"),
+            "Points": profile.get("userStats", {}).get("points") or profile.get("points"),
             "Respects": profile.get("respects", info.get("respects")),
             "Country": profile.get("country_name"),
             "Team": profile.get("team", {}).get("name") if profile.get("team") else None,

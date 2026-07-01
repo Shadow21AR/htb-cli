@@ -11,7 +11,7 @@ from typing import Optional
 
 import typer
 
-from ..client import HTBError, api_get
+from ..client import HTBError, api_get, api_get_v5
 from ..formatters import (
     console,
     create_table,
@@ -79,7 +79,7 @@ def favorites(
 ):
     """Show your favorite / owned items."""
     try:
-        data = api_get("/v5/user/dashboard/favorites")
+        data = api_get_v5("/user/dashboard/favorites")
         if raw:
             print_json(data)
         else:
@@ -99,7 +99,7 @@ def inprogress(
 ):
     """Show your in-progress items."""
     try:
-        data = api_get("/v5/user/dashboard/inprogress")
+        data = api_get_v5("/user/dashboard/inprogress")
         if raw:
             print_json(data)
         else:
@@ -119,7 +119,7 @@ def recommended(
 ):
     """Show recommended items for you."""
     try:
-        data = api_get("/v5/user/dashboard/recommended")
+        data = api_get_v5("/user/dashboard/recommended")
         if raw:
             print_json(data)
         else:

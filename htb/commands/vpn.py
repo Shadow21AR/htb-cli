@@ -11,11 +11,11 @@ Commands:
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import typer
 
-from ..client import HTBError, api_download, api_get, api_post
+from ..client import HTBError, api_download, api_get, api_get_v5, api_post
 from ..files import resolve_output_path
 from ..formatters import (
     console,
@@ -56,38 +56,48 @@ def status(
         raise typer.Exit(1)
 
 
+def _parse_server_options(data: dict) -> list[dict]:
+    """Parse nested server structure from /connections/servers response.
+
+    Response shape: {data: {disabled, assigned, options: {Region: {LocationType: {location, name, servers: {id: server}}}}}}
+    """
+    all_servers: list[dict[str, Any]] = []
+    options = data.get("data", {}).get("options", {})
+    for region_name, region_data in options.items():
+        if isinstance(region_data, dict):
+            for location_name, location_data in region_data.items():
+                if isinstance(location_data, dict) and "servers" in location_data:
+                    servers_dict = location_data["servers"]
+                    if isinstance(servers_dict, dict):
+                        server_list = servers_dict.values()
+                    else:
+                        server_list = servers_dict
+                    for srv in server_list:
+                        srv["location"] = location_data.get("name", location_name)
+                        all_servers.append(srv)
+    return all_servers
+
+
 @app.command("servers")
 def servers(
     product: Product = typer.Option(Product.labs, "--product", "-p", help="Product type (labs, competitive, fortresses, starting_point)"),
+    prolab_id: Optional[int] = typer.Option(None, "--prolab-id", help="Pro Lab ID to get VPN servers for"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """List available VPN servers."""
     try:
-        data = api_get("/connections/servers", {"product": product.value})
+        if prolab_id is not None:
+            data = api_get(f"/connections/servers/prolab/{prolab_id}")
+        else:
+            data = api_get("/connections/servers", {"product": product.value})
 
         if raw:
             print_json(data)
             return
 
-        # Parse the nested server structure
-        # Response: {data: {disabled, assigned, options: {Region: {LocationType: {location, name, servers: {id: server}}}}}}
-        all_servers = []
-        options = data.get("data", {}).get("options", {})
-        for region_name, region_data in options.items():
-            if isinstance(region_data, dict):
-                for location_name, location_data in region_data.items():
-                    if isinstance(location_data, dict) and "servers" in location_data:
-                        servers_dict = location_data["servers"]
-                        # servers can be a dict keyed by id or a list
-                        if isinstance(servers_dict, dict):
-                            server_list = servers_dict.values()
-                        else:
-                            server_list = servers_dict
-                        for srv in server_list:
-                            srv["location"] = location_data.get("name", location_name)
-                            all_servers.append(srv)
-
-        print_servers(all_servers)
+        all_servers = _parse_server_options(data)
+        title = f"Pro Lab {prolab_id} VPN Servers" if prolab_id is not None else "VPN Servers"
+        print_servers(all_servers, title)
 
     except HTBError as e:
         print_error(e.message)
@@ -100,7 +110,7 @@ def connections(
 ):
     """Show all active connections across products."""
     try:
-        data = api_get("/v5/connections")
+        data = api_get_v5("/connections")
 
         if raw:
             print_json(data)

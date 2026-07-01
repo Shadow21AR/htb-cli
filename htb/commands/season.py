@@ -13,7 +13,7 @@ from typing import Optional
 
 import typer
 
-from ..client import HTBError, api_get, api_post
+from ..client import HTBError, api_get, api_get_v5, api_post
 from ..formatters import (
     console,
     create_table,
@@ -81,7 +81,7 @@ def machines(
             machines = data.get("data", [])
             title = f"Season {season_id} Machines" if season_id else "Season Machines"
             try:
-                active_data = api_get("/v5/virtual_machine/active")
+                active_data = api_get_v5("/virtual_machine/active")
                 active_info = active_data.get("info") or {}
                 active_id = active_info.get("id")
             except HTBError:
@@ -121,7 +121,7 @@ def active_machines(
                     else:
                         machines = [payload]
             try:
-                active_data = api_get("/v5/virtual_machine/active")
+                active_data = api_get_v5("/virtual_machine/active")
                 active_info = active_data.get("info") or {}
                 active_id = active_info.get("id")
             except HTBError:
@@ -141,7 +141,7 @@ def own(
     """Submit a flag for arena points (uses active machine)."""
     try:
         # Get active machine ID first
-        active_data = api_get("/v5/virtual_machine/active")
+        active_data = api_get_v5("/virtual_machine/active")
         info = active_data.get("info")
 
         if not info:

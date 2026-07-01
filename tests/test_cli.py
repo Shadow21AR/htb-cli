@@ -54,13 +54,17 @@ def test_machine_achievement_uses_active_machine_when_name_omitted(monkeypatch):
     import htb.commands.machines as machines_cmd
 
     def fake_api_get(path, params=None):
-        if path == "/v5/virtual_machine/active":
-            return {"info": {"id": 832, "name": "Gavel"}}
         if path == "/user/info":
             return {"info": {"id": 541515, "name": "me"}}
         raise AssertionError(f"Unexpected path: {path}")
 
+    def fake_api_get_v5(path, params=None):
+        if path == "/virtual_machine/active":
+            return {"info": {"id": 832, "name": "Gavel"}}
+        raise AssertionError(f"Unexpected path: {path}")
+
     monkeypatch.setattr(machines_cmd, "api_get", fake_api_get)
+    monkeypatch.setattr(machines_cmd, "api_get_v5", fake_api_get_v5)
 
     runner = CliRunner()
     result = runner.invoke(app, ["machine", "achievement"])
@@ -73,13 +77,17 @@ def test_machine_achievement_no_active_machine(monkeypatch):
     import htb.commands.machines as machines_cmd
 
     def fake_api_get(path, params=None):
-        if path == "/v5/virtual_machine/active":
-            return {"info": None}
         if path == "/user/info":
             return {"info": {"id": 541515, "name": "me"}}
         raise AssertionError(f"Unexpected path: {path}")
 
+    def fake_api_get_v5(path, params=None):
+        if path == "/virtual_machine/active":
+            return {"info": None}
+        raise AssertionError(f"Unexpected path: {path}")
+
     monkeypatch.setattr(machines_cmd, "api_get", fake_api_get)
+    monkeypatch.setattr(machines_cmd, "api_get_v5", fake_api_get_v5)
 
     runner = CliRunner()
     result = runner.invoke(app, ["machine", "achievement"])

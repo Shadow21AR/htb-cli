@@ -22,11 +22,15 @@ def test_season_active_accepts_list_payload(monkeypatch):
                     "free": True,
                 }
             ]
-        if path == "/v5/virtual_machine/active":
+        raise AssertionError(f"Unexpected path: {path}")
+
+    def fake_api_get_v5(path, params=None):
+        if path == "/virtual_machine/active":
             return {"info": None}
         raise AssertionError(f"Unexpected path: {path}")
 
     monkeypatch.setattr(season_cmd, "api_get", fake_api_get)
+    monkeypatch.setattr(season_cmd, "api_get_v5", fake_api_get_v5)
 
     result = runner.invoke(app, ["season", "active-machines"])
     assert result.exit_code == 0
@@ -54,11 +58,15 @@ def test_season_active_accepts_wrapped_payload(monkeypatch):
                     }
                 ]
             }
-        if path == "/v5/virtual_machine/active":
+        raise AssertionError(f"Unexpected path: {path}")
+
+    def fake_api_get_v5(path, params=None):
+        if path == "/virtual_machine/active":
             return {"info": None}
         raise AssertionError(f"Unexpected path: {path}")
 
     monkeypatch.setattr(season_cmd, "api_get", fake_api_get)
+    monkeypatch.setattr(season_cmd, "api_get_v5", fake_api_get_v5)
 
     result = runner.invoke(app, ["season", "active-machines"])
     assert result.exit_code == 0

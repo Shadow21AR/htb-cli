@@ -12,7 +12,7 @@ from typing import Optional
 
 import typer
 
-from ..client import HTBError, api_get
+from ..client import HTBError, api_get, api_get_v5
 from ..formatters import (
     console,
     create_table,
@@ -118,7 +118,7 @@ def activity(
     """View a user's recent activity (solves)."""
     try:
         uid = _resolve_id(user_id)
-        data = api_get(f"/v5/user/profile/activity/{uid}", {"page": page})
+        data = api_get_v5(f"/user/profile/activity/{uid}", {"page": page})
         if raw:
             print_json(data)
             return
@@ -158,7 +158,7 @@ def content(
     """View a user's solves/owns by content type."""
     try:
         uid = _resolve_id(user_id)
-        data = api_get(f"/v5/user/profile/content/{uid}", {"type": type})
+        data = api_get_v5(f"/user/profile/content/{uid}", {"type": type})
         if raw:
             print_json(data)
             return

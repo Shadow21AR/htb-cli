@@ -38,7 +38,10 @@ class Config:
 
     def url(self, path: str) -> str:
         """Build full URL for an endpoint path."""
-        # Allow overriding version in path (e.g., "/v5/machine/own")
+        # Allow absolute API paths (e.g., "/api/experience/v1/...")
+        if path.startswith("/api/"):
+            return f"{self.api_base}{path[4:]}"
+        # Allow overriding version (e.g., "/v5/machine/own")
         # But exclude /vm/ endpoints which are valid v4 endpoints
         if path.startswith("/v") and not path.startswith("/vm/"):
             return f"{self.api_base}{path}"

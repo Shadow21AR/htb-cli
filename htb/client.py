@@ -166,6 +166,21 @@ def api_post(path: str, data: dict | None = None) -> dict[str, Any]:
     return get_client().post(path, data)
 
 
+def api_get_v5(path: str, params: dict | None = None) -> dict[str, Any]:
+    """GET request to a v5 endpoint (prepends /v5 to path)."""
+    return get_client().get(f"/v5{path}", params)
+
+
+def api_get_experience(path: str, params: dict | None = None) -> dict[str, Any]:
+    """GET request to the experience/v1 API (prepends /api/experience/v1)."""
+    return get_client().get(f"/api/experience/v1{path}", params)
+
+
+def api_post_v5(path: str, data: dict | None = None) -> dict[str, Any]:
+    """POST request to a v5 endpoint (prepends /v5 to path)."""
+    return get_client().post(f"/v5{path}", data)
+
+
 def api_download(path: str) -> str:
     """Convenience function for text downloads."""
     return get_client().download(path)
