@@ -271,6 +271,52 @@ def print_sherlock(sherlock: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Fortress formatters
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def print_fortresses(fortresses: list[dict], title: str = "Fortresses") -> None:
+    """Print fortress list in a table."""
+    if not fortresses:
+        print_warning("No fortresses found")
+        return
+
+    table = create_table(["ID", "Name", "Flags", "Owned"], title)
+
+    for f in fortresses:
+        owned_f = f.get("owned_flags", 0)
+        total_f = f.get("number_of_flags", "?")
+        owned_str = f"{owned_f}/{total_f}"
+        table.add_row(
+            str(f.get("id", "?")),
+            sanitize_text(f.get("name", "?")),
+            str(total_f),
+            owned_str,
+        )
+
+    console.print(table)
+
+
+def print_fortress(fortress: dict) -> None:
+    """Print single fortress details."""
+    info = {
+        "ID": fortress.get("id"),
+        "Name": fortress.get("name"),
+        "IP": fortress.get("ip"),
+        "Flags": fortress.get("num_flags", fortress.get("number_of_flags")),
+        "Points": fortress.get("points"),
+        "Company": fortress.get("company", {}).get("name") if isinstance(fortress.get("company"), dict) else None,
+        "Reset Votes": fortress.get("reset_votes"),
+        "Progress": fortress.get("progress_percent", fortress.get("progress")),
+        "Players Completed": fortress.get("players_completed"),
+        "Description": fortress.get("description"),
+    }
+
+    info = {k: v for k, v in info.items() if v is not None}
+    print_key_value(info, f"Fortress: {sanitize_text(fortress.get('name', 'Unknown'))}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VPN/Connection formatters
 # ─────────────────────────────────────────────────────────────────────────────
 

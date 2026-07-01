@@ -63,6 +63,12 @@ Usage:
     htb pwnbox stop               Stop Pwnbox
     htb pwnbox usage              Show usage stats
 
+    htb fortress list             List fortresses
+    htb fortress info ID          Get fortress details
+    htb fortress flags ID         Show fortress flags
+    htb fortress own ID FLAG      Submit flag
+    htb fortress reset ID         Vote to reset
+
 All commands support --raw/-r for JSON output.
 """
 
@@ -71,7 +77,7 @@ import typer
 from rich.console import Console
 
 from .client import HTBError
-from .commands import auth, challenges, dashboard, machines, profile, pwnbox, season, sherlocks, test as test_cmd, vpn
+from .commands import auth, challenges, dashboard, fortresses, machines, profile, pwnbox, season, sherlocks, test as test_cmd, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 from rich import box
 from rich.console import Console
@@ -95,6 +101,7 @@ app.add_typer(sherlocks.app, name="sherlock")
 app.add_typer(dashboard.app, name="dashboard")
 app.add_typer(profile.app, name="profile")
 app.add_typer(pwnbox.app, name="pwnbox")
+app.add_typer(fortresses.app, name="fortress")
 app.add_typer(auth.app, name="auth")
 app.add_typer(test_cmd.app, name="test")
 
