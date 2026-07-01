@@ -178,7 +178,7 @@ def status(
             if level_title:
                 lvl_str += f" {level_title}"
         xp_str = f"{xp:,}" if xp else None
-        streak_str = f"{streak}d" if streak else None
+        streak_str = f"{streak}w" if streak else None
 
         user_parts = {
             "Name": profile.get("name", info.get("name")),
@@ -335,7 +335,7 @@ def whoami(
         xp_str = f"{xp:,}" if xp is not None else None
         streak_str = None
         if streak_count is not None:
-            streak_str = f"{streak_count}d"
+            streak_str = f"{streak_count}w"
             if streak_danger:
                 streak_str += " [yellow]⚠[/yellow]"
         group(("Lvl", lvl_str), ("XP", xp_str), ("Strk", streak_str))
