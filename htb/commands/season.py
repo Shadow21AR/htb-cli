@@ -13,7 +13,7 @@ from typing import Optional
 
 import typer
 
-from ..client import HTBError, api_get, api_get_v5, api_post
+from ..client import HTBError, api_get, api_get_v5, api_post_v5
 from ..formatters import (
     console,
     create_table,
@@ -136,11 +136,11 @@ def active_machines(
 @app.command("own")
 def own(
     flag: str = typer.Argument(..., help="Flag to submit"),
+    difficulty: int = typer.Option(0, "--difficulty", "-d", help="Difficulty rating (0-100)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
-    """Submit a flag for arena points (uses active machine)."""
+    """Submit a flag for the active season machine."""
     try:
-        # Get active machine ID first
         active_data = api_get_v5("/virtual_machine/active")
         info = active_data.get("info")
 
@@ -150,10 +150,10 @@ def own(
 
         machine_id = info.get("id")
 
-        # Use arena endpoint for seasonal points
-        data = api_post("/arena/own", {
+        data = api_post_v5("/machine/own", {
             "id": machine_id,
             "flag": flag,
+            "difficulty": difficulty,
         })
 
         if raw:
