@@ -142,7 +142,7 @@ def list_machines(
             "state": state.value,
         }
         if difficulty:
-            params["difficulty"] = difficulty.value
+            params["difficulty[]"] = [difficulty.value]
         if os:
             params["os[]"] = [o.value for o in os]
         if search:

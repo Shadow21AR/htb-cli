@@ -37,6 +37,7 @@ class Difficulty(str, Enum):
     easy = "easy"
     medium = "medium"
     hard = "hard"
+    very_easy = "very-easy"
     insane = "insane"
 
 
@@ -81,17 +82,17 @@ def list_sherlocks(
 ):
     """List available sherlocks."""
     try:
-        data = api_get("/sherlocks", {"per_page": per_page, "page": page})
+        params: dict = {"per_page": per_page, "page": page}
+        if difficulty:
+            params["difficulty[]"] = [difficulty.value]
+
+        data = api_get("/sherlocks", params)
 
         if raw:
             print_json(data)
             return
 
         sherlocks = data.get("data", [])
-
-        # Apply filters
-        if difficulty:
-            sherlocks = [s for s in sherlocks if s.get("difficulty", "").lower() == difficulty.value]
 
         if unsolved:
             sherlocks = [s for s in sherlocks if not s.get("is_owned")]

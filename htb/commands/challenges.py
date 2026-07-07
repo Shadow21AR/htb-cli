@@ -38,7 +38,7 @@ app = typer.Typer(help="Challenge management")
 
 class Difficulty(str, Enum):
     """Challenge difficulty levels."""
-    very_easy = "very_easy"
+    very_easy = "very-easy"
     easy = "easy"
     medium = "medium"
     hard = "hard"
