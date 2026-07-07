@@ -61,8 +61,16 @@ class Category(str, Enum):
     pwn = "pwn"
     quantum = "quantum"
     reversing = "reversing"
+    satellite = "satellite"
     secure_coding = "secure coding"
     web = "web"
+
+_CATEGORY_IDS: dict[str, int] = {
+    "ai/ml": 21, "blockchain": 12, "coding": 22, "crypto": 2,
+    "forensics": 7, "gamepwn": 11, "hardware": 10, "ics": 24,
+    "misc": 6, "mobile": 8, "osint": 9, "pwn": 4, "quantum": 25,
+    "reversing": 1, "satellite": 27, "secure coding": 23, "web": 5,
+}
 
 
 class ChallengeSortBy(str, Enum):
@@ -144,6 +152,8 @@ def list_challenges(
             params["state"] = state.value
         if difficulty:
             params["difficulty[]"] = [d.value for d in difficulty]
+        if category:
+            params["category[]"] = [_CATEGORY_IDS[c.value] for c in category]
         if search:
             params["keyword"] = search
         if todo:
