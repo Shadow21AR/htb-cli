@@ -183,7 +183,7 @@ def print_machine(machine: dict) -> None:
         "User Owns": _pick(data, "user_owns_count", "userOwnsCount", "user_owns"),
         "Root Owns": _pick(data, "root_owns_count", "rootOwnsCount", "root_owns"),
         "Reviews": data.get("reviews_count"),
-        "Free": "Yes" if data.get("free") else "No",
+        "Free": "Yes" if _pick(data, "free", "is_free", "isFree") else "No",
         "Release": str(data.get("release", ""))[:10] if data.get("release") else None,
         "Creator": maker_name,
         "First User Blood": f"{user_blood_name} ({user_blood.get('blood_difference', '')})" if user_blood_name else None,

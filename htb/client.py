@@ -5,6 +5,7 @@ Handles authentication, error handling, retries, and response parsing.
 """
 
 import atexit
+import html as html_mod
 import time
 from typing import Any
 
@@ -113,10 +114,24 @@ class HTBClient:
         response = self._request_with_retry("POST", url, json=data or {})
         return self._handle_response(response)
 
+    def _follow_redirect(self, response: httpx.Response) -> httpx.Response:
+        """Follow HTTP redirect and decode HTML entities in the Location URL."""
+        location = response.headers.get("Location") or response.headers.get("location")
+        if not location:
+            return response
+        location = html_mod.unescape(location)
+        # CDN URLs reject HTB auth headers; use an anonymous request
+        follow_resp = httpx.get(location, follow_redirects=True)
+        if follow_resp.status_code >= 400:
+            raise HTBError(f"Download redirect failed: HTTP {follow_resp.status_code}", follow_resp.status_code)
+        return follow_resp
+
     def download(self, path: str) -> str:
         """Download raw content (e.g., VPN files)."""
         url = self.config.url(path)
         response = self._request_with_retry("GET", url)
+        if response.is_redirect:
+            response = self._follow_redirect(response)
         if response.status_code >= 400:
             raise HTBError(f"Download failed: HTTP {response.status_code}", response.status_code)
         return response.text
@@ -125,6 +140,8 @@ class HTBClient:
         """Download binary content."""
         url = self.config.url(path)
         response = self._request_with_retry("GET", url)
+        if response.is_redirect:
+            response = self._follow_redirect(response)
         if response.status_code >= 400:
             raise HTBError(f"Download failed: HTTP {response.status_code}", response.status_code)
         return response.content

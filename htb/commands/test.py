@@ -119,7 +119,7 @@ def test_all(
         _test("GET", f"/challenge/download/{cid}", "challenge_dl")
         _test("POST", "/container/start", "container_start", post_data={"challenge_id": cid})
         _test("POST", "/container/stop", "container_stop", post_data={"challenge_id": cid})
-        _test("POST", "/challenge/own", "challenge_own", post_data={"id": cid, "flag": "INVALID", "difficulty": 0})
+        _test("POST", "/challenge/own", "challenge_own", post_data={"challenge_id": cid, "flag": "INVALID"})
     else:
         RESULTS.append({"tag": "challenge_info", "method": "GET", "path": "/challenge/info/-", "result": "SKIP", "status": None, "note": "no valid challenge ID"})
 

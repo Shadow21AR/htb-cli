@@ -339,7 +339,6 @@ def download(
 def own(
     flag: str = typer.Argument(..., help="Flag to submit"),
     name: Optional[str] = typer.Option(None, "--challenge", "-c", help="Challenge name or ID (auto-detects if docker running)"),
-    difficulty: int = typer.Option(0, "--difficulty", "-d", help="Difficulty rating (0-100)"),
     raw: bool = typer.Option(False, "--raw", "-r", help="Output raw JSON"),
 ):
     """Submit a flag for a challenge."""
@@ -358,9 +357,8 @@ def own(
                 raise typer.Exit(1)
 
         data = api_post("/challenge/own", {
-            "id": challenge_id,
+            "challenge_id": challenge_id,
             "flag": flag,
-            "difficulty": difficulty,
         })
 
         if raw:

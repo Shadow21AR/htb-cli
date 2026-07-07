@@ -162,7 +162,7 @@ def test_all_endpoints():
 
     test_endpoint("POST", "/challenge/start", "challenge_start", post_data={"challenge_id": 999999})
     test_endpoint("POST", "/challenge/stop", "challenge_stop", post_data={"challenge_id": 999999})
-    test_endpoint("POST", "/challenge/own", "challenge_own", post_data={"id": 999999, "flag": "INVALID", "difficulty": 0})
+    test_endpoint("POST", "/challenge/own", "challenge_own", post_data={"challenge_id": 999999, "flag": "INVALID"})
 
     # ── Sherlocks ────────────────────────────────────
     test_endpoint("GET", "/sherlocks", "sherlock_list", params={"per_page": 3, "page": 1})
