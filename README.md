@@ -19,6 +19,7 @@ Clean, modular command-line interface for the Hack The Box API.
 - **Rankings** — Users, teams, countries, universities leaderboards
 - **Teams** — Info, members, activity
 - **Experience API** — Level, XP, streak shown in `whoami` and `status`
+- **VIP indicator** — 👑 marks retired/VIP-only items in lists and details
 
 ## Installation
 
@@ -57,6 +58,7 @@ export HTB_TOKEN='your-token-here'
 ### Overview
 
 ```bash
+htb --version           # Show version
 htb status              # User info, VPN connection, active machine
 htb whoami              # Stylish profile with level, XP, streak
 htb search linux        # Global search
@@ -73,11 +75,14 @@ htb auth unset          # Remove stored token
 
 ### Machines
 
+👑 marks VIP+ retired machines in lists and details.
+
 ```bash
-htb machine list                        # Active machines (default)
+htb machine list                        # All machines (any state)
+htb machine list --state active         # Active machines only
 htb machine list --state retired        # Retired machines
 htb machine list --state unreleased     # Upcoming machines
-htb machine list --difficulty easy      # Filter by difficulty
+htb machine list --difficulty easy      # Filter by difficulty (repeatable)
 htb machine list --os linux             # Filter by OS (repeatable)
 htb machine list --search "gavel"       # Search by name
 htb machine list --sort name            # Sort: name|difficulty|release|rating|points
@@ -85,7 +90,7 @@ htb machine list --todo                 # Todo-listed only
 htb machine list --free                 # Free machines only
 htb machine list --completed            # Completed only
 htb machine list --incomplete           # Incomplete only
-htb machine info Gavel                  # Machine details
+htb machine info Gavel                  # Machine details (shows VIP status)
 htb machine spawn Gavel                 # Spawn by name or ID
 htb machine active                      # Current spawned machine
 htb machine stop                        # Terminate active machine
@@ -99,37 +104,42 @@ htb machine achievement Gavel           # Shareable URL for a specific machine
 
 ### Challenges
 
+👑 marks retired (VIP-only) challenges in lists and details. Downloads follow redirects and support `&amp;`-encoded URLs.
+
 ```bash
-htb challenge list                      # Active challenges (default)
-htb challenge list --state retired      # Retired challenges
-htb challenge list --state unreleased   # Upcoming challenges
-htb challenge list --category web       # Filter by category (repeatable)
-htb challenge list --difficulty easy    # Filter by difficulty (repeatable)
-htb challenge list --search "name"      # Search by name
-htb challenge list --todo               # Todo-listed only
-htb challenge list --completed          # Completed only
-htb challenge list --incomplete         # Incomplete only
-htb challenge categories                # List all categories
-htb challenge info "Reminiscent"        # Challenge details
-htb challenge start "Reminiscent"       # Spawn docker container
-htb challenge stop                      # Stop running docker (auto-detect)
-htb challenge stop "Reminiscent"        # Stop specific challenge docker
-htb challenge active                    # Show running docker instance
-htb challenge download "Reminiscent"    # Download files
+htb challenge list                      # All challenges (any state)
+htb challenge list --state active        # Active challenges only
+htb challenge list --state retired       # Retired challenges
+htb challenge list --state unreleased    # Upcoming challenges
+htb challenge list --category web        # Filter by category (repeatable)
+htb challenge list --difficulty easy     # Filter by difficulty (repeatable)
+htb challenge list --search "name"       # Search by name
+htb challenge list --todo                # Todo-listed only
+htb challenge list --completed           # Completed only
+htb challenge list --incomplete          # Incomplete only
+htb challenge categories                 # List all category IDs
+htb challenge info "Reminiscent"         # Challenge details (shows VIP status)
+htb challenge start "Reminiscent"        # Spawn docker container
+htb challenge stop                       # Stop running docker (auto-detect)
+htb challenge stop "Reminiscent"         # Stop specific challenge docker
+htb challenge active                     # Show running docker instance
+htb challenge download "Reminiscent"     # Download files (follows redirects)
 htb challenge download "Reminiscent" -o ./dir/
 htb challenge own 'HTB{flag}' -c "Reminiscent"   # Submit flag
-htb challenge writeup "Reminiscent"     # Community writeup URL
-htb challenge activity "Reminiscent"    # Recent solves
+htb challenge writeup "Reminiscent"      # Community writeup URL
+htb challenge activity "Reminiscent"     # Recent solves
 ```
 
 ### Sherlocks
 
+👑 marks retired (VIP-only) sherlocks in lists and details.
+
 ```bash
-htb sherlock list                       # All sherlocks
+htb sherlock list                       # All sherlocks (retired_free + active first)
 htb sherlock list --difficulty easy     # Filter by difficulty
 htb sherlock list --unsolved            # Unsolved only
 htb sherlock categories                 # List categories
-htb sherlock info "Meerkat"             # Details
+htb sherlock info "Meerkat"             # Details (shows VIP status)
 htb sherlock tasks "Meerkat"            # List questions
 htb sherlock download "Meerkat"         # Download files
 htb sherlock download "Meerkat" -o ./dir/

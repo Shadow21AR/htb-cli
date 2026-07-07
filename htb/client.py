@@ -123,8 +123,18 @@ class HTBClient:
         # CDN URLs reject HTB auth headers; use an anonymous request
         follow_resp = httpx.get(location, follow_redirects=True)
         if follow_resp.status_code >= 400:
-            raise HTBError(f"Download redirect failed: HTTP {follow_resp.status_code}", follow_resp.status_code)
+            msg = self._extract_error(follow_resp)
+            raise HTBError(msg or f"Download redirect failed: HTTP {follow_resp.status_code}", follow_resp.status_code)
         return follow_resp
+
+    @staticmethod
+    def _extract_error(response: httpx.Response) -> str | None:
+        """Extract error message from a response body."""
+        try:
+            body = response.json()
+            return body.get("message") or body.get("error") or body.get("msg")
+        except Exception:
+            return None
 
     def download(self, path: str) -> str:
         """Download raw content (e.g., VPN files)."""
@@ -133,7 +143,8 @@ class HTBClient:
         if response.is_redirect:
             response = self._follow_redirect(response)
         if response.status_code >= 400:
-            raise HTBError(f"Download failed: HTTP {response.status_code}", response.status_code)
+            msg = self._extract_error(response)
+            raise HTBError(msg or f"Download failed: HTTP {response.status_code}", response.status_code)
         return response.text
 
     def download_bytes(self, path: str) -> bytes:
@@ -143,7 +154,8 @@ class HTBClient:
         if response.is_redirect:
             response = self._follow_redirect(response)
         if response.status_code >= 400:
-            raise HTBError(f"Download failed: HTTP {response.status_code}", response.status_code)
+            msg = self._extract_error(response)
+            raise HTBError(msg or f"Download failed: HTTP {response.status_code}", response.status_code)
         return response.content
 
     def close(self):

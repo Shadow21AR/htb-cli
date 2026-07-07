@@ -89,13 +89,6 @@ class SortDirection(str, Enum):
     desc = "desc"
 
 
-class ChallengeState(str, Enum):
-    """Challenge list state filter."""
-    active = "active"
-    retired = "retired"
-    unreleased = "unreleased"
-
-
 def _find_challenge_by_name(name: str) -> dict | None:
     """Find a challenge by name (case-insensitive, searches all states)."""
     name_lower = name.lower()
@@ -129,9 +122,7 @@ def _resolve_challenge_id(name_or_id: str) -> int:
 def list_challenges(
     page: int = typer.Option(1, "--page", "-p", help="Page number"),
     per_page: int = typer.Option(20, "--per-page", "-n", help="Items per page"),
-    state: ChallengeState = typer.Option(
-        ChallengeState.active, "--state", help="Filter by state (active, retired, unreleased)"
-    ),
+    state: Optional[str] = typer.Option(None, "--state", help="Filter by state (active, retired, unreleased)"),
     category: Optional[List[Category]] = typer.Option(None, "--category", "-c", help="Filter by category (use multiple times)"),
     difficulty: Optional[List[Difficulty]] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty (use multiple times)"),
     search: Optional[str] = typer.Option(None, "--search", "-q", help="Search by name"),
@@ -144,12 +135,12 @@ def list_challenges(
 ):
     """List available challenges."""
     try:
-        params = {
+        params: dict = {
             "page": page,
             "per_page": per_page,
         }
-        if state.value != "active":
-            params["state"] = state.value
+        if state:
+            params["state"] = state
         if difficulty:
             params["difficulty[]"] = [d.value for d in difficulty]
         if category:
@@ -158,6 +149,10 @@ def list_challenges(
             params["keyword"] = search
         if todo:
             params["todo"] = "1"
+        if completed:
+            params["completed"] = "1"
+        if incomplete:
+            params["status"] = "incompleted"
         if sort_by:
             params["sort_by"] = sort_by.value
         if sort_type:
@@ -180,15 +175,6 @@ def list_challenges(
                     c["category_name"] = cat_map.get(c.get("challenge_category_id"), "Unknown")
             except HTBError:
                 pass
-
-        # Client-side filters
-        if category:
-            cat_vals = {c.value for c in category}
-            challenges = [c for c in challenges if c.get("category_name", "").lower() in cat_vals]
-        if completed:
-            challenges = [c for c in challenges if c.get("isCompleted") or c.get("isSolved") or c.get("solved")]
-        if incomplete:
-            challenges = [c for c in challenges if not c.get("isCompleted") and not c.get("isSolved") and not c.get("solved")]
 
         if not challenges:
             print_warning("No challenges found")

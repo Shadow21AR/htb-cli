@@ -57,12 +57,6 @@ class SortBy(str, Enum):
     points = "points"
 
 
-class MachineState(str, Enum):
-    """Machine list state filter."""
-    active = "active"
-    retired = "retired"
-    unreleased = "unreleased"
-
 
 class OsFilter(str, Enum):
     """OS filter options."""
@@ -119,9 +113,7 @@ def _resolve_user_id() -> int:
 def list_machines(
     page: int = typer.Option(1, "--page", "-p", help="Page number"),
     per_page: int = typer.Option(20, "--per-page", "-n", help="Items per page"),
-    state: MachineState = typer.Option(
-        MachineState.active, "--state", help="Filter by state (active, retired, unreleased)"
-    ),
+    state: Optional[str] = typer.Option(None, "--state", help="Filter by state (active, retired, unreleased)"),
     difficulty: Optional[Difficulty] = typer.Option(None, "--difficulty", "-d", help="Filter by difficulty"),
     os: Optional[List[OsFilter]] = typer.Option(None, "--os", help="Filter by OS (use multiple times: --os linux --os windows)"),
     search: Optional[str] = typer.Option(None, "--search", "-q", help="Search by name"),
@@ -139,8 +131,9 @@ def list_machines(
         params = {
             "page": page,
             "per_page": per_page,
-            "state": state.value,
         }
+        if state:
+            params["state"] = state
         if difficulty:
             params["difficulty[]"] = [difficulty.value]
         if os:
@@ -169,10 +162,10 @@ def list_machines(
             return
 
         machines = data.get("data", [])
-        title = f"{state.value.title()} Machines"
+        title = f"{state.title() if state else 'All'} Machines"
 
         if not machines:
-            print_warning(f"No {state.value} machines found")
+            print_warning(f"No {state if state else ''} machines found")
             return
 
         try:

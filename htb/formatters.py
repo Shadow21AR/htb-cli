@@ -125,7 +125,7 @@ def print_machines(machines: list[dict], title: str = "Machines", active_id: int
         print_warning("No machines found")
         return
 
-    table = create_table(["ID", "Name", "OS", "Difficulty", "Points", "Rating", "User", "Root"], title)
+    table = create_table(["ID", "Name", "OS", "Difficulty", "Points", "Rating", "User", "Root", ""], title)
 
     for m in machines:
         data = _unwrap_machine_obj(m)
@@ -142,9 +142,12 @@ def print_machines(machines: list[dict], title: str = "Machines", active_id: int
             root_owns = _pick(data, "rootOwnsCount", "root_owns_count", "root_owns") or ""
             machine_id = _pick(data, "id", "machine_id", "machineId", "box_id")
 
+            name = sanitize_text(_pick(data, "name", "machine_name", "machineName", "value") or "?")
+            vip = "👑" if data.get("requiredSubscription") == "VIP+" else ""
+
             row = [
                 str(machine_id or "?"),
-                sanitize_text(_pick(data, "name", "machine_name", "machineName", "value") or "?"),
+                name,
                 sanitize_text(_pick(data, "os", "os_name", "osName") or "?"),
                 sanitize_text(
                     _pick(data, "difficultyText", "difficulty_text", "difficulty", "difficultyTextShort") or "?"
@@ -153,6 +156,7 @@ def print_machines(machines: list[dict], title: str = "Machines", active_id: int
                 str(_pick(data, "star", "stars", "rating", "avg_rating", "avgRating") or "?"),
                 str(user_owns),
                 str(root_owns),
+                vip,
             ]
             is_active = active_id is not None and machine_id is not None and int(machine_id) == active_id
             table.add_row(*row, style="green" if is_active else None)
@@ -193,6 +197,9 @@ def print_machine(machine: dict) -> None:
         "VPN Server ID": _pick(data, "vpn_server_id", "vpnServerId") or _pick(machine, "vpn_server_id", "vpnServerId"),
     }
 
+    if data.get("requiredSubscription") == "VIP+":
+        info["VIP"] = "👑 Required"
+
     info = {k: v for k, v in info.items() if v is not None}
     title_name = _pick(data, "name", "machine_name", "machineName", "value") or "Unknown"
     print_key_value(info, f"Machine: {sanitize_text(title_name)}")
@@ -209,16 +216,19 @@ def print_challenges(challenges: list[dict], title: str = "Challenges") -> None:
         print_warning("No challenges found")
         return
 
-    table = create_table(["ID", "Name", "Category", "Difficulty", "Rating", "Solves"], title)
+    table = create_table(["ID", "Name", "Category", "Difficulty", "Rating", "Solves", ""], title)
 
     for c in challenges:
+        name = sanitize_text(c.get("name", "?"))
+        vip = "👑" if c.get("state") == "retired" else ""
         table.add_row(
             str(c.get("id", "?")),
-            sanitize_text(c.get("name", "?")),
+            name,
             sanitize_text(c.get("category_name", c.get("category", "?"))),
             sanitize_text(c.get("difficulty", "?")),
             str(c.get("rating", "?")),
             str(c.get("solves", "?")),
+            vip,
         )
 
     console.print(table)
@@ -252,6 +262,9 @@ def print_challenge(challenge: dict) -> None:
         "Description": data.get("description"),
     }
 
+    if data.get("state") == "retired" and data.get("retired"):
+        info["VIP"] = "👑 Required"
+
     info = {k: v for k, v in info.items() if v is not None}
     print_key_value(info, f"Challenge: {sanitize_text(data.get('name', 'Unknown'))}")
 
@@ -267,15 +280,18 @@ def print_sherlocks(sherlocks: list[dict], title: str = "Sherlocks") -> None:
         print_warning("No sherlocks found")
         return
 
-    table = create_table(["ID", "Name", "Difficulty", "Category", "Solves"], title)
+    table = create_table(["ID", "Name", "Difficulty", "Category", "Solves", ""], title)
 
     for s in sherlocks:
+        name = sanitize_text(s.get("name", "?"))
+        vip = "👑" if s.get("state") == "retired" else ""
         table.add_row(
             str(s.get("id", "?")),
-            sanitize_text(s.get("name", "?")),
+            name,
             sanitize_text(s.get("difficulty", "?")),
             sanitize_text(s.get("category_name", s.get("category", "?"))),
             str(s.get("solves", s.get("user_completions", "?"))),
+            vip,
         )
 
     console.print(table)
@@ -293,6 +309,9 @@ def print_sherlock(sherlock: dict) -> None:
         "Solves": data.get("solves", data.get("user_completions")),
         "Description": data.get("description"),
     }
+
+    if data.get("state") == "retired":
+        info["VIP"] = "👑 Required"
 
     info = {k: v for k, v in info.items() if v is not None}
     print_key_value(info, f"Sherlock: {sanitize_text(data.get('name', 'Unknown'))}")
