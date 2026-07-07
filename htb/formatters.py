@@ -262,6 +262,14 @@ def print_challenge(challenge: dict) -> None:
         "Description": data.get("description"),
     }
 
+    docker_ip = data.get("docker_ip") or (data.get("play_info") or {}).get("ip")
+    docker_ports = data.get("docker_ports") or (data.get("play_info") or {}).get("ports")
+    if docker_ip:
+        port_str = f":{docker_ports[0]}" if docker_ports else ""
+        info["Docker"] = f"{docker_ip}{port_str} ({data.get('docker_status', 'running')})"
+    elif data.get("docker"):
+        info["Docker"] = data.get("docker_status", "Not running")
+
     if data.get("state") == "retired" and data.get("retired"):
         info["VIP"] = "👑 Required"
 

@@ -28,6 +28,7 @@ from ..formatters import (
     print_error,
     print_flag_result,
     print_json,
+    print_key_value,
     print_success,
     print_warning,
     sanitize_text,
@@ -385,17 +386,27 @@ def active(
             print_warning("No active challenge")
             return
 
-        # Enrich with category names
-        try:
-            cats_data = api_get("/challenge/categories/list")
-            cat_map = {c["id"]: c["name"] for c in cats_data.get("info", [])}
-            for c in running:
-                c["category_name"] = cat_map.get(c.get("challenge_category_id"), "Unknown")
-        except HTBError:
-            pass
+        # Enrich with docker/connection details from info endpoint
+        for c in running:
+            try:
+                info_data = api_get(f"/challenge/info/{c['id']}")
+                chal = info_data.get("challenge", info_data)
+                c.update(chal)
+            except HTBError:
+                pass
 
         for c in running:
-            print_challenge(c)
+            docker_ip = c.get("docker_ip") or (c.get("play_info") or {}).get("ip")
+            docker_ports = c.get("docker_ports") or (c.get("play_info") or {}).get("ports")
+            info = {
+                "ID": c.get("id"),
+                "Name": c.get("name"),
+                "State": c.get("state", "active"),
+            }
+            if docker_ip:
+                port_str = f":{docker_ports[0]}" if docker_ports else ""
+                info["Docker"] = f"{docker_ip}{port_str}"
+            print_key_value(info, f"Active Challenge: {sanitize_text(c.get('name', 'Unknown'))}")
 
     except HTBError as e:
         print_error(e.message)
