@@ -20,6 +20,7 @@ Clean, modular command-line interface for the Hack The Box API.
 - **Teams** — Info, members, activity
 - **Experience API** — Level, XP, streak shown in `whoami` and `status`
 - **VIP indicator** — 👑 marks retired/VIP-only items in lists and details
+- **Health check** — Real-time HTB service status from status.hackthebox.com
 
 ## Installation
 
@@ -247,6 +248,13 @@ htb team members 7168                   # Team members (by ID)
 htb team activity 7168                  # Recent team activity (by ID)
 ```
 
+### Health
+
+```bash
+htb health                              # Check HTB service status (no login required)
+htb health -r                           # Raw JSON for scripting
+```
+
 ## JSON Output
 
 Every command supports `--raw` / `-r` for JSON output:
@@ -255,6 +263,7 @@ Every command supports `--raw` / `-r` for JSON output:
 htb machine active -r | jq '.info.ip'
 htb machine list -r | jq '.data[].name'
 htb whoami -r | jq '.profile.points'
+htb health -r | jq '.[] | select(.status != "operational")'
 ```
 
 ## API Reference

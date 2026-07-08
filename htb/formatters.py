@@ -656,3 +656,94 @@ def print_flag_result(result: dict) -> None:
         print_success(result.get("message", "Flag accepted!"))
     else:
         print_error(result.get("message", "Flag rejected"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Health / Infra formatters
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_STATUS_DOT = {
+    "operational": "●",
+    "partial_outage": "●",
+    "major_outage": "●",
+    "degraded_performance": "●",
+}
+
+_STATUS_COLOR = {
+    "operational": "green",
+    "partial_outage": "yellow",
+    "major_outage": "red",
+    "degraded_performance": "yellow",
+}
+
+_STATUS_LABEL = {
+    "operational": "Operational",
+    "partial_outage": "Partial Outage",
+    "major_outage": "Major Outage",
+    "degraded_performance": "Degraded",
+}
+
+
+def print_infra_health(results: list[dict]) -> None:
+    """Print HTB infrastructure health status with Rich tables."""
+    from rich.table import Table
+
+    # Separate incidents from components
+    incidents = [r for r in results if r.get("type") == "incident"]
+    components = [r for r in results if "group" in r]
+
+    # Group components by group name
+    groups: dict[str, list[dict]] = {}
+    for c in components:
+        groups.setdefault(c["group"], []).append(c)
+
+    # Overall status summary
+    all_ok = all(c["status"] == "operational" for c in components)
+    if all_ok and not incidents:
+        console.print("[bold green]● All systems operational[/bold green]")
+    elif all_ok and incidents:
+        console.print("[bold yellow]● All systems operational — active incident(s)[/bold yellow]")
+    else:
+        degraded = [c for c in components if c["status"] != "operational"]
+        names = ", ".join(c["name"] for c in degraded[:3])
+        suffix = " and more" if len(degraded) > 3 else ""
+        console.print(f"[bold yellow]● {len(degraded)} service(s) degraded[/bold yellow] [dim]({names}{suffix})[/dim]")
+    console.print()
+
+    # Print active incidents at top
+    for inc in incidents:
+        title = inc.get("title", "Unknown incident")
+        console.print(Panel(
+            f"[yellow]●[/yellow] [bold]{title}[/bold]",
+            box=box.ROUNDED,
+            border_style="yellow",
+        ))
+        console.print()
+
+    # Print each service group as a table
+    for group_name, group_comps in groups.items():
+        table = Table(
+            box=box.SIMPLE_HEAD,
+            show_header=False,
+            padding=(0, 2),
+            border_style="dim",
+        )
+        table.add_column("", width=2, no_wrap=True)
+        table.add_column("Service")
+        table.add_column("", width=18)
+
+        for c in group_comps:
+            status = c["status"]
+            dot = _STATUS_DOT.get(status, "●")
+            color = _STATUS_COLOR.get(status, "white")
+            label = _STATUS_LABEL.get(status, status.replace("_", " ").title())
+            service_name = html.unescape(c.get("name", "?"))
+            table.add_row(
+                f"[{color}]{dot}[/{color}]",
+                service_name,
+                f"[{color}]{label}[/{color}]",
+            )
+
+        console.print(Panel(table, title=f"[bold]{group_name}[/bold]", box=box.ROUNDED, border_style="dim"))
+        console.print()

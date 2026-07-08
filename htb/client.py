@@ -218,3 +218,66 @@ def api_download(path: str) -> str:
 def api_download_bytes(path: str) -> bytes:
     """Convenience function for binary downloads."""
     return get_client().download_bytes(path)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Health / Infra status (status.hackthebox.com - separate from HTB API)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+import re as _re
+
+
+def fetch_infra_status() -> list[dict]:
+    """Scrape https://status.hackthebox.com/ for component statuses and active incidents.
+
+    Returns a list of dicts with keys:
+      group  — component group name (e.g. "Platforms", "Backend Services")
+      name   — component name (e.g. "HTB Labs", "VPN Services")
+      status — one of "operational", "partial_outage", "major_outage",
+               "degraded_performance"
+    """
+    resp = httpx.get("https://status.hackthebox.com/", timeout=15)
+    resp.raise_for_status()
+    html = resp.text
+
+    results: list[dict] = []
+    incidents: list[dict] = []
+
+    # Parse active incidents
+    for m in _re.finditer(
+        r'class="htb-text-primary text-xl pl-5">\s*Incident:\s*(.+?)</p>',
+        html,
+        _re.DOTALL,
+    ):
+        incidents.append({"title": m.group(1).strip(), "type": "incident"})
+
+    # Parse group sections — walk through groups sequentially
+    # Each group: <div wire:snapshot="..."> ... <p class="ml-1 htb-text-secondary">GroupName</p> ...
+    # Components inside have <p class="pl-6">Name</p> + <p class="htb-status-text-xxx">Status</p>
+    group_pattern = _re.compile(
+        r'<p class="ml-1 htb-text-secondary">(.+?)</p>\s*'
+        r'(.*?)(?=<p class="ml-1 htb-text-secondary">|$)',
+        _re.DOTALL,
+    )
+    comp_pattern = _re.compile(
+        r'<p class="pl-6">(.+?)</p>.*?'
+        r'class="htb-status-text-(\w+)">(\w+(?:\s+\w+)?)</p>',
+        _re.DOTALL,
+    )
+
+    for gm in group_pattern.finditer(html):
+        group_name = gm.group(1).strip()
+        group_html = gm.group(2)
+        for cm in comp_pattern.finditer(group_html):
+            results.append({
+                "group": group_name,
+                "name": html_mod.unescape(cm.group(1).strip()),
+                "status": cm.group(2),
+            })
+
+    if incidents:
+        for inc in incidents:
+            results.insert(0, inc | {"type": "incident"})
+
+    return results

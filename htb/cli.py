@@ -84,6 +84,8 @@ Usage:
     htb team members ID            List team members
     htb team activity ID           Show recent team activity
 
+    htb health                     Check HTB service health (no login required)
+
 All commands support --raw/-r for JSON output.
 """
 
@@ -95,7 +97,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .client import HTBError
-from .commands import auth, challenges, dashboard, fortresses, machines, profile, pwnbox, rankings, season, sherlocks, teams, test as test_cmd, tracks, vpn
+from .commands import auth, challenges, dashboard, fortresses, health, machines, profile, pwnbox, rankings, season, sherlocks, teams, test as test_cmd, tracks, vpn
 from .formatters import print_error, print_json, print_key_value, sanitize_text
 
 console = Console()
@@ -129,6 +131,7 @@ app.add_typer(tracks.app, name="track")
 app.add_typer(rankings.app, name="ranking")
 app.add_typer(teams.app, name="team")
 app.add_typer(auth.app, name="auth")
+app.add_typer(health.app, name="health")
 app.add_typer(test_cmd.app, name="test")
 
 
