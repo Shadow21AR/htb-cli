@@ -204,12 +204,36 @@ def status(
             box=box.ROUNDED,
         ))
 
+        # ── Active Machine panel ──
+        mm = machine_data.get("info")
+        active_vpn_id = (mm or {}).get("vpn_server_id") or (mm or {}).get("vpnServerId")
+        if mm:
+            machine_parts = {
+                "Name": mm.get("name"),
+                "OS": mm.get("os"),
+                "IP": mm.get("ip", "Not assigned"),
+                "Difficulty": mm.get("difficultyText"),
+                "Lab Server": mm.get("lab_server") or mm.get("labServer"),
+                "VPN Server ID": active_vpn_id,
+            }
+            console.print(Panel(
+                "\n".join(f"[cyan]{k}:[/cyan] {sanitize_text(v)}" for k, v in machine_parts.items() if v),
+                title="Active Machine",
+                box=box.ROUNDED,
+            ))
+        else:
+            console.print(Panel("[dim]No active machine[/dim]", title="Active Machine", box=box.ROUNDED))
+
         # ── Connection panel ──
         conns = conn_data.get("data", [])
         if conns:
             connected = [c for c in conns if isinstance(c.get("assigned_server"), dict)]
             if connected:
-                c = connected[0]
+                if active_vpn_id:
+                    match = [c for c in connected if c["assigned_server"].get("id") == active_vpn_id]
+                    c = match[0] if match else connected[0]
+                else:
+                    c = connected[0]
                 srv = c.get("assigned_server", {})
                 conn_parts = {
                     "Server": srv.get("friendly_name"),
@@ -225,23 +249,6 @@ def status(
             ))
         else:
             console.print(Panel("[dim]No connection data[/dim]", title="Connection", box=box.ROUNDED))
-
-        # ── Active Machine panel ──
-        mm = machine_data.get("info")
-        if mm:
-            machine_parts = {
-                "Name": mm.get("name"),
-                "OS": mm.get("os"),
-                "IP": mm.get("ip", "Not assigned"),
-                "Difficulty": mm.get("difficultyText"),
-            }
-            console.print(Panel(
-                "\n".join(f"[cyan]{k}:[/cyan] {sanitize_text(v)}" for k, v in machine_parts.items() if v),
-                title="Active Machine",
-                box=box.ROUNDED,
-            ))
-        else:
-            console.print(Panel("[dim]No active machine[/dim]", title="Active Machine", box=box.ROUNDED))
 
     except HTBError as e:
         print_error(e.message)
