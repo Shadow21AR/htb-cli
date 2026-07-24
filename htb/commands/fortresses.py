@@ -109,8 +109,12 @@ def own(
             else:
                 print_error(data.get("message", "Flag rejected"))
     except HTBError as e:
-        print_error(e.message)
-        raise typer.Exit(1)
+        msg = e.message.lower()
+        if "success" in msg or "already own" in msg:
+            print_success(e.message)
+        else:
+            print_error(e.message)
+            raise typer.Exit(1)
 
 
 @app.command("reset")
