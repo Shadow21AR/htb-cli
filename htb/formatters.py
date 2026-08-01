@@ -650,12 +650,52 @@ def print_connection_status(status: dict | list) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+_FLAG_SUCCESS_MESSAGES = (
+    r"\bsuccess",
+    r"\balready own",
+    r"\balready owned",
+    r"\bcongratulations",
+    r"\bcorrect\b",
+)
+
+
+def _is_flag_success(message: str) -> bool:
+    """Heuristic for HTB flag-submission messages that indicate success.
+
+    The HTB API returns 4xx status codes for some flag endpoints even when the
+    flag is correct (e.g. "Congratulations!", "Flag submitted successfully"),
+    so we fall back on the message text when no success field is present.
+    """
+    import re
+
+    msg = (message or "").lower()
+    return any(re.search(token, msg) for token in _FLAG_SUCCESS_MESSAGES)
+
+
 def print_flag_result(result: dict) -> None:
     """Print flag submission result."""
-    if result.get("success") or result.get("status") == 1:
-        print_success(result.get("message", "Flag accepted!"))
+    message = result.get("message", "Flag accepted!")
+    if result.get("success") or result.get("status") == 1 or _is_flag_success(message):
+        print_success(message)
     else:
         print_error(result.get("message", "Flag rejected"))
+
+
+def print_flag_submission_error(error) -> bool:
+    """Handle an HTBError raised during flag submission.
+
+    The API rejects some successful submissions with a 4xx status code, so the
+    client surfaces them as HTBError. Detect success messages and print them
+    as a success instead of an error.
+
+    Returns True if the message was a real error (caller should exit non-zero),
+    False if it was actually a success message.
+    """
+    if _is_flag_success(error.message):
+        print_success(error.message)
+        return False
+    print_error(error.message)
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────

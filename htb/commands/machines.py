@@ -24,6 +24,7 @@ from ..formatters import (
     console,
     print_error,
     print_flag_result,
+    print_flag_submission_error,
     print_json,
     print_machine,
     print_machines,
@@ -383,8 +384,8 @@ def own(
             print_flag_result(data)
 
     except HTBError as e:
-        print_error(e.message)
-        raise typer.Exit(1)
+        if print_flag_submission_error(e):
+            raise typer.Exit(1)
 
 
 @app.command("add-todo")

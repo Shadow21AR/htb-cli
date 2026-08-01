@@ -19,6 +19,7 @@ from ..formatters import (
     print_fortresses,
     print_json,
     print_key_value,
+    print_flag_submission_error,
     print_success,
 )
 
@@ -109,11 +110,7 @@ def own(
             else:
                 print_error(data.get("message", "Flag rejected"))
     except HTBError as e:
-        msg = e.message.lower()
-        if "success" in msg or "already own" in msg:
-            print_success(e.message)
-        else:
-            print_error(e.message)
+        if print_flag_submission_error(e):
             raise typer.Exit(1)
 
 

@@ -46,15 +46,17 @@ class HTBClient:
             data = {"raw": response.text}
 
         if response.status_code >= 400:
-            if response.status_code in (401, 403):
+            # Prefer the server-provided message when present; some endpoints
+            # return 403 with a specific rejection reason (e.g. "Incorrect flag")
+            # that is not an authentication problem.
+            message = (
+                data.get("message")
+                or data.get("error")
+                or data.get("msg")
+                or f"HTTP {response.status_code}"
+            )
+            if response.status_code in (401, 403) and message.startswith("HTTP"):
                 message = "Authentication failed. Run `htb auth set` or set HTB_TOKEN."
-            else:
-                message = (
-                    data.get("message")
-                    or data.get("error")
-                    or data.get("msg")
-                    or f"HTTP {response.status_code}"
-                )
             raise HTBError(message, response.status_code, data)
 
         return data
