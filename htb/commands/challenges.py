@@ -308,7 +308,26 @@ def download(
         challenge_id = _resolve_challenge_id(name)
 
         try:
-            content = api_download_bytes(f"/challenge/download/{challenge_id}")
+            from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+
+            progress = Progress(
+                TextColumn("[bold blue]Downloading…[/bold blue]"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                DownloadColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
+            )
+
+            def _update(done, total):
+                progress.update(task_id, completed=done, total=total or None)
+
+            with progress:
+                task_id = progress.add_task("", total=None)
+                content = api_download_bytes(
+                    f"/challenge/download/{challenge_id}",
+                    progress_callback=_update,
+                )
         except HTBError as e:
             if e.status_code == 404:
                 print_warning("No files to download for this challenge")

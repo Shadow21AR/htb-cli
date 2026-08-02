@@ -30,6 +30,7 @@ class Config:
     api_base: str = "https://labs.hackthebox.com/api"
     api_version: str = "v4"
     timeout: float = 30.0
+    download_timeout: float = 300.0
     max_retries: int = 3
 
     @property

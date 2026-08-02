@@ -141,7 +141,27 @@ def download(
     """Download sherlock investigation files."""
     try:
         sherlock_id = _resolve_sherlock_id(name)
-        content = api_download_bytes(f"/sherlocks/{sherlock_id}/download_link")
+
+        from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+
+        progress = Progress(
+            TextColumn("[bold blue]Downloading…[/bold blue]"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+        )
+
+        def _update(done, total):
+            progress.update(task_id, completed=done, total=total or None)
+
+        with progress:
+            task_id = progress.add_task("", total=None)
+            content = api_download_bytes(
+                f"/sherlocks/{sherlock_id}/download_link",
+                progress_callback=_update,
+            )
 
         # Get sherlock name for filename
         try:

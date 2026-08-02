@@ -123,7 +123,11 @@ class HTBClient:
             return response
         location = html_mod.unescape(location)
         # CDN URLs reject HTB auth headers; use an anonymous request
-        follow_resp = httpx.get(location, follow_redirects=True)
+        follow_resp = httpx.get(
+            location,
+            follow_redirects=True,
+            timeout=self.config.download_timeout,
+        )
         if follow_resp.status_code >= 400:
             msg = self._extract_error(follow_resp)
             raise HTBError(msg or f"Download redirect failed: HTTP {follow_resp.status_code}", follow_resp.status_code)
@@ -138,27 +142,62 @@ class HTBClient:
         except Exception:
             return None
 
-    def download(self, path: str) -> str:
-        """Download raw content (e.g., VPN files)."""
-        url = self.config.url(path)
-        response = self._request_with_retry("GET", url)
-        if response.is_redirect:
-            response = self._follow_redirect(response)
-        if response.status_code >= 400:
-            msg = self._extract_error(response)
-            raise HTBError(msg or f"Download failed: HTTP {response.status_code}", response.status_code)
-        return response.text
+    def _stream_to_bytes(
+        self,
+        path: str,
+        progress_callback=None,
+    ) -> tuple[bytes, str]:
+        """Download a file, streaming from the (possibly redirected) CDN URL.
 
-    def download_bytes(self, path: str) -> bytes:
-        """Download binary content."""
+        Returns the raw content bytes and the final content type. Uses the
+        dedicated ``download_timeout`` instead of the API request timeout so
+        large challenge files don't trip the default handshake/read limit.
+        """
         url = self.config.url(path)
         response = self._request_with_retry("GET", url)
-        if response.is_redirect:
-            response = self._follow_redirect(response)
+
         if response.status_code >= 400:
             msg = self._extract_error(response)
             raise HTBError(msg or f"Download failed: HTTP {response.status_code}", response.status_code)
-        return response.content
+
+        content_type = response.headers.get("content-type", "")
+        if response.is_redirect:
+            location = response.headers.get("Location") or response.headers.get("location")
+            if not location:
+                raise HTBError("Download redirect missing Location header", response.status_code)
+            location = html_mod.unescape(location)
+            # CDN URLs reject HTB auth headers; use an anonymous request
+            chunks: list[bytes] = []
+            downloaded = 0
+            total = 0
+            with httpx.stream(
+                "GET",
+                location,
+                follow_redirects=True,
+                timeout=self.config.download_timeout,
+            ) as stream:
+                if stream.status_code >= 400:
+                    msg = self._extract_error(stream)
+                    raise HTBError(msg or f"Download failed: HTTP {stream.status_code}", stream.status_code)
+                total = int(stream.headers.get("content-length") or 0)
+                for chunk in stream.iter_bytes():
+                    chunks.append(chunk)
+                    downloaded += len(chunk)
+                    if progress_callback:
+                        progress_callback(downloaded, total)
+            return b"".join(chunks), content_type
+
+        return response.content, content_type
+
+    def download(self, path: str, progress_callback=None) -> str:
+        """Download raw content (e.g., VPN files)."""
+        content, _ = self._stream_to_bytes(path, progress_callback)
+        return content.decode("utf-8", errors="replace")
+
+    def download_bytes(self, path: str, progress_callback=None) -> bytes:
+        """Download binary content."""
+        content, _ = self._stream_to_bytes(path, progress_callback)
+        return content
 
     def close(self):
         """Close the HTTP client."""
@@ -212,14 +251,14 @@ def api_post_v5(path: str, data: dict | None = None) -> dict[str, Any]:
     return get_client().post(f"/v5{path}", data)
 
 
-def api_download(path: str) -> str:
+def api_download(path: str, progress_callback=None) -> str:
     """Convenience function for text downloads."""
-    return get_client().download(path)
+    return get_client().download(path, progress_callback)
 
 
-def api_download_bytes(path: str) -> bytes:
+def api_download_bytes(path: str, progress_callback=None) -> bytes:
     """Convenience function for binary downloads."""
-    return get_client().download_bytes(path)
+    return get_client().download_bytes(path, progress_callback)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
